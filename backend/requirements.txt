@@ -1,0 +1,12 @@
+django
+psycopg2-binary
+requests
+djangorestframework
+dj-rest-auth
+django-allauth
+django-cors-headers
+djangorestframework-simplejwt
+python-decouple
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
