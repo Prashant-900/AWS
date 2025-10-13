@@ -2,7 +2,6 @@ import React from 'react';
 
 const MessageInput = ({ 
   newMessage, 
-  loading, 
   onMessageChange, 
   onSubmit 
 }) => {
@@ -10,7 +9,9 @@ const MessageInput = ({
     <div style={{ 
       padding: '20px', 
       borderTop: '1px solid #ddd',
-      backgroundColor: 'white'
+      backgroundColor: 'white',
+      width: '100%',
+      boxSizing: 'border-box'
     }}>
       <form onSubmit={onSubmit} style={{ display: 'flex', gap: '10px' }}>
         <input
@@ -18,7 +19,6 @@ const MessageInput = ({
           value={newMessage}
           onChange={onMessageChange}
           placeholder="Type your message..."
-          disabled={loading}
           style={{
             flex: 1,
             padding: '12px',
@@ -29,7 +29,7 @@ const MessageInput = ({
         />
         <button
           type="submit"
-          disabled={loading || !newMessage.trim()}
+          disabled={!newMessage.trim()}
           style={{
             padding: '12px 24px',
             backgroundColor: '#007bff',
@@ -37,10 +37,11 @@ const MessageInput = ({
             border: 'none',
             borderRadius: '25px',
             cursor: 'pointer',
-            opacity: loading || !newMessage.trim() ? 0.5 : 1
+            opacity: !newMessage.trim() ? 0.5 : 1,
+            transition: 'all 0.2s ease'
           }}
         >
-          {loading ? 'Sending...' : 'Send'}
+          Send
         </button>
       </form>
     </div>

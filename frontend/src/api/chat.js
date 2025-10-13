@@ -38,20 +38,7 @@ export const getSessionMessages = async (sessionId) => {
   }
 };
 
-export const sendMessage = async (sessionId, content) => {
-  try {
-    const response = await api.post('/chats/message/send/', {
-      session_id: sessionId,
-      content
-    });
-    return response.data;
-  } catch (error) {
-    if (error.response?.data?.error) {
-      throw new Error(error.response.data.error);
-    }
-    throw new Error('Failed to send message.');
-  }
-};
+// sendMessage function removed - using WebSocket only for real-time messaging
 
 export const saveMessage = async (sessionId, sender, content) => {
   try {

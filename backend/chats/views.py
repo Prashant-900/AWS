@@ -57,47 +57,7 @@ def save_message(request):
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def send_message(request):
-    try:
-        data = json.loads(request.body)
-        session_id = data.get('session_id')
-        content = data.get('content')
-        
-        try:
-            session = ChatSession.objects.get(id=session_id, user=request.user)
-        except ChatSession.DoesNotExist:
-            return Response({'error': 'Session not found'}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Save user message
-        user_message = Message.objects.create(
-            session=session,
-            sender='user',
-            content=content
-        )
-        
-        # Generate AI response (for now just return "hello")
-        ai_response = "Hello! I'm an AI assistant. How can I help you today?"
-        
-        # Save AI message
-        ai_message = Message.objects.create(
-            session=session,
-            sender='ai',
-            content=ai_response
-        )
-        
-        # Return both messages
-        user_serializer = MessageSerializer(user_message)
-        ai_serializer = MessageSerializer(ai_message)
-        
-        return Response({
-            'user_message': user_serializer.data,
-            'ai_message': ai_serializer.data
-        }, status=status.HTTP_201_CREATED)
-        
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+# Send message functionality removed - using WebSocket only for real-time messaging
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

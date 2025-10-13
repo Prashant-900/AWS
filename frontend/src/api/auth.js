@@ -48,7 +48,3 @@ export const logoutUser = () => {
   localStorage.removeItem('refresh');
 };
 
-// Keep for compatibility but not implemented
-export const loginWithGoogle = async () => {
-  throw new Error('Google OAuth is not implemented in this version');
-};

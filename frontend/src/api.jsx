@@ -7,8 +7,16 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem(ACCESS_TOKEN);
-    config.headers.Authorization = token ? `Bearer ${token}` : "";
+    // Don't add auth headers for login/register endpoints
+    const isAuthEndpoint = config.url?.includes('/user/login/') || config.url?.includes('/user/register/');
+    
+    if (!isAuthEndpoint) {
+      const token = localStorage.getItem(ACCESS_TOKEN);
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    
     return config;
   },
   (error) => {

@@ -15,9 +15,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             <Session />
           </ProtectedRoute>
         } />
-        <Route path="/" element={
+        <Route path="/session" element={
           <ProtectedRoute>
             <Session />
+          </ProtectedRoute>
+        } />
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Navigate to="/session" replace />
           </ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to="/" replace />} />

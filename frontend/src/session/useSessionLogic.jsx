@@ -1,133 +1,202 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSessions, createSession, getSessionMessages, sendMessage } from '../api/chat';
-import { getUserProfile, logoutUser } from '../api/auth';
+import {
+  useUserProfile,
+  useSessionsManager,
+  useMessagesManager,
+  useWebSocketManager,
+  useMessageInput,
+  useSessionActions
+} from './logic';
 
+/**
+ * Main session logic hook that orchestrates all session-related functionality
+ * This hook has been refactored into smaller, focused pieces for better maintainability
+ */
 const useSessionLogic = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [sessions, setSessions] = useState([]);
-  const [currentSession, setCurrentSession] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  const loadUserProfile = useCallback(async () => {
-    try {
-      const userData = await getUserProfile();
-      setUser(userData);
-    } catch (err) {
-      console.error('Failed to load user profile:', err);
-      setError('Failed to load user profile');
-    }
-  }, []);
+  // Initialize all sub-hooks
+  const {
+    user,
+    loadUserProfile,
+    userError,
+    setUserError
+  } = useUserProfile();
 
-  const loadSessions = useCallback(async () => {
-    try {
-      const sessionsData = await getSessions();
-      setSessions(sessionsData);
-    } catch (err) {
-      console.error('Failed to load sessions:', err);
-      setError('Failed to load sessions');
-    }
-  }, []);
+  const {
+    sessions,
+    currentSession,
+    sessionsLoading,
+    sessionsError,
+    loadSessions,
+    handleCreateNewSession,
+    selectSession,
+    clearCurrentSession,
+    setSessionsError
+  } = useSessionsManager();
 
-  const loadSessionMessages = useCallback(async (id) => {
-    try {
-      setLoading(true);
-      const messagesData = await getSessionMessages(id);
-      setMessages(messagesData);
-      
-      // Find current session
-      const session = sessions.find(s => s.id === parseInt(id));
-      setCurrentSession(session);
-    } catch (err) {
-      console.error('Failed to load messages:', err);
-      setError('Failed to load messages');
-    } finally {
-      setLoading(false);
-    }
-  }, [sessions]);
+  const {
+    messages,
+    streamingMessage,
+    messagesLoading,
+    messagesError,
+    loadSessionMessages,
+    addUserMessage,
+    removeMessage,
+    addFinalMessage,
+    clearMessages,
+    setStreamingMessage,
+    clearStreamingMessage,
+    setMessagesError,
+    setMessagesLoading
+  } = useMessagesManager();
 
+  const {
+    newMessage,
+    handleMessageChange,
+    clearMessage,
+    getMessage
+  } = useMessageInput();
+
+  // Memoize the message handlers to prevent WebSocket reconnections
+  const memoizedMessageHandlers = useMemo(() => ({
+    setStreamingMessage,
+    addFinalMessage,
+    setMessagesLoading,
+    clearStreamingMessage
+  }), [setStreamingMessage, addFinalMessage, setMessagesLoading, clearStreamingMessage]);
+
+  const {
+    wsConnectionStatus,
+    wsError,
+    sendWebSocketMessage,
+    connectionStatus,
+    setWsError
+  } = useWebSocketManager(sessionId, currentSession);
+
+  const {
+    handleSendMessage,
+    handleLogout,
+    handleSessionSelect,
+    formatTime
+  } = useSessionActions();
+
+  // Set up message handlers for WebSocket callbacks
+  // This is needed because WebSocket callbacks need access to message functions
+  window.messageHandlers = memoizedMessageHandlers;
+
+  // Combined error state (prioritize user errors, then WebSocket, then others)
+  const error = userError || wsError || sessionsError || messagesError;
+  const loading = sessionsLoading || messagesLoading;
+
+  // Initialize user profile on mount
   useEffect(() => {
+    console.log('🎯 useSessionLogic: Loading user profile');
     loadUserProfile();
-    loadSessions();
-  }, [loadUserProfile, loadSessions]);
+  }, [loadUserProfile]);
 
+  // Initialize sessions after user is loaded
   useEffect(() => {
-    if (sessionId && sessionId !== 'new') {
-      loadSessionMessages(sessionId);
+    if (user) {
+      console.log('🎯 useSessionLogic: User loaded, loading sessions');
+      loadSessions();
+    }
+  }, [user, loadSessions]);
+
+  // Handle session changes and message loading
+  useEffect(() => {
+    console.log('🎯 useSessionLogic: Session/messages effect triggered', { 
+      sessionId, 
+      sessionsLength: sessions.length 
+    });
+    
+    if (sessionId && sessionId !== 'new' && sessions.length > 0) {
+      const session = selectSession(sessionId, sessions);
+      if (session) {
+        console.log('🎯 useSessionLogic: Loading messages for session', sessionId);
+        loadSessionMessages(sessionId);
+      }
     } else {
-      setMessages([]);
-      setCurrentSession(null);
+      console.log('🎯 useSessionLogic: Clearing messages and session');
+      clearMessages();
+      clearCurrentSession();
     }
-  }, [sessionId, loadSessionMessages]);
+    // Clear streaming message when switching sessions
+    clearStreamingMessage();
+  }, [sessionId, sessions, selectSession, loadSessionMessages, clearMessages, clearCurrentSession, clearStreamingMessage]);
 
-  const handleCreateNewSession = async () => {
-    try {
-      setLoading(true);
-      const newSessionData = await createSession();
-      setSessions([newSessionData, ...sessions]);
-      navigate(`/session/${newSessionData.id}`);
-    } catch (err) {
-      console.error('Failed to create session:', err);
-      setError('Failed to create new session');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSendMessage = async (e) => {
+  // Enhanced message sending handler
+  const enhancedHandleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !currentSession) return;
+    const messageContent = getMessage();
+    
+    await handleSendMessage(messageContent, connectionStatus, currentSession, {
+      addUserMessage,
+      removeMessage,
+      clearMessage,
+      sendWebSocketMessage,
+      setError: (error) => {
+        setWsError(error);
+        setMessagesError(error);
+        setUserError(error);
+        setSessionsError(error);
+      }
+    });
+  };
 
+  // Enhanced session creation handler
+  const enhancedCreateNewSession = async () => {
     try {
-      setLoading(true);
-      const messageData = await sendMessage(currentSession.id, newMessage.trim());
-      
-      // Add both user and AI messages to the display
-      setMessages([...messages, messageData.user_message, messageData.ai_message]);
-      setNewMessage('');
-    } catch (err) {
-      console.error('Failed to send message:', err);
-      setError('Failed to send message');
-    } finally {
-      setLoading(false);
+      await handleCreateNewSession(navigate);
+    } catch (error) {
+      // Error is already handled in the hook
+      console.error('Session creation failed:', error);
     }
   };
 
-  const handleLogout = () => {
-    logoutUser();
-    navigate('/login');
+  // Enhanced logout handler
+  const enhancedHandleLogout = () => {
+    handleLogout(navigate);
   };
 
-  const handleSessionSelect = (id) => {
-    navigate(`/session/${id}`);
+  // Enhanced session selection handler
+  const enhancedHandleSessionSelect = (id) => {
+    handleSessionSelect(id, navigate);
   };
 
-  const handleMessageChange = (e) => {
-    setNewMessage(e.target.value);
-  };
-
-  const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString();
-  };
+  // Clean up message handlers on unmount
+  useEffect(() => {
+    return () => {
+      if (window.messageHandlers) {
+        delete window.messageHandlers;
+      }
+    };
+  }, []);
 
   return {
+    // Session state
     sessionId,
     user,
     sessions,
     currentSession,
+    
+    // Message state
     messages,
     newMessage,
+    streamingMessage,
+    
+    // Status state
     loading,
     error,
-    handleCreateNewSession,
-    handleSendMessage,
-    handleLogout,
-    handleSessionSelect,
+    wsConnectionStatus,
+    
+    // Action handlers
+    handleCreateNewSession: enhancedCreateNewSession,
+    handleSendMessage: enhancedHandleSendMessage,
+    handleLogout: enhancedHandleLogout,
+    handleSessionSelect: enhancedHandleSessionSelect,
     handleMessageChange,
     formatTime
   };

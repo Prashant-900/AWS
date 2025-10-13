@@ -7,6 +7,10 @@ django-allauth
 django-cors-headers
 djangorestframework-simplejwt
 python-decouple
-google-auth
-google-auth-oauthlib
-google-auth-httplib2
+ollama
+strands-agents
+strands-agents-tools
+channels
+channels-redis
+asyncio
+daphne
