@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { ResponseRenderer } from './views';
 
 const ChatArea = ({ 
   sessionId, 
@@ -173,66 +174,64 @@ const ChatArea = ({
               >
                 <div
                   style={{
-                    maxWidth: '70%',
-                    padding: '12px 16px',
-                    borderRadius: '18px',
-                    backgroundColor: message.sender === 'user' ? '#007bff' : '#e9ecef',
-                    color: message.sender === 'user' ? 'white' : 'black',
+                    maxWidth: message.sender === 'user' ? '70%' : '85%',
                     position: 'relative',
                     ...(message.isStreaming && {
-                      opacity: 0.8,
+                      opacity: 0.9,
                       animation: 'pulse 2s infinite'
                     })
                   }}
                 >
-                  <div style={{ 
-                    marginBottom: message.isStreaming ? '8px' : '4px',
-                    whiteSpace: 'pre-wrap'
-                  }}>
-                    {message.content}
-                  </div>
-                  
-                  {message.isStreaming && (
+                  {message.sender === 'user' ? (
+                    // User messages: simple bubble style
                     <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      marginBottom: '4px'
+                      padding: '12px 16px',
+                      borderRadius: '18px',
+                      backgroundColor: '#007bff',
+                      color: 'white'
                     }}>
-                      <div style={{
-                        width: '3px',
-                        height: '3px',
-                        backgroundColor: 'currentColor',
-                        borderRadius: '50%',
-                        animation: 'blink 1.4s infinite both',
-                        marginRight: '2px'
-                      }}></div>
-                      <div style={{
-                        width: '3px',
-                        height: '3px',
-                        backgroundColor: 'currentColor',
-                        borderRadius: '50%',
-                        animation: 'blink 1.4s infinite both',
-                        animationDelay: '0.2s',
-                        marginRight: '2px'
-                      }}></div>
-                      <div style={{
-                        width: '3px',
-                        height: '3px',
-                        backgroundColor: 'currentColor',
-                        borderRadius: '50%',
-                        animation: 'blink 1.4s infinite both',
-                        animationDelay: '0.4s'
-                      }}></div>
+                      <div style={{ 
+                        marginBottom: '4px',
+                        whiteSpace: 'pre-wrap'
+                      }}>
+                        {message.content}
+                      </div>
+                      <div style={{ 
+                        fontSize: '11px', 
+                        opacity: 0.7,
+                        textAlign: 'right'
+                      }}>
+                        {formatTime(message.timestamp)}
+                      </div>
                     </div>
-                  )}
-                  
-                  {!message.isStreaming && (
-                    <div style={{ 
-                      fontSize: '11px', 
-                      opacity: 0.7,
-                      textAlign: 'right'
+                  ) : (
+                    // AI messages: use ResponseRenderer for formatted content
+                    <div style={{
+                      padding: '12px 16px',
+                      borderRadius: '18px',
+                      backgroundColor: '#e9ecef',
+                      color: 'black'
                     }}>
-                      {formatTime(message.timestamp)}
+                      <ResponseRenderer
+                        content={message.content}
+                        isStreaming={message.isStreaming}
+                        messageId={message.id || message.message_id || `temp-${index}`}
+                        onCopy={(text) => {
+                          navigator.clipboard.writeText(text);
+                          // Could add toast notification here
+                        }}
+                      />
+                      
+                      {!message.isStreaming && (
+                        <div style={{ 
+                          fontSize: '11px', 
+                          opacity: 0.7,
+                          textAlign: 'right',
+                          marginTop: '8px'
+                        }}>
+                          {formatTime(message.timestamp)}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
