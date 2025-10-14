@@ -4,7 +4,7 @@ Description: Simple Python Lambda with API Gateway
 
 Globals:
   Function:
-    Timeout: 10
+    Timeout: 60
     MemorySize: 128
 
 Resources:
@@ -19,7 +19,7 @@ Resources:
           Type: Api
           Properties:
             Path: /hello
-            Method: get
+            Method: post
 
 Outputs:
   ApiUrl:

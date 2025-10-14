@@ -7,6 +7,9 @@ from minio.error import S3Error
 from django.conf import settings
 from decouple import config
 import logging
+import asyncio
+import aiohttp
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +59,29 @@ class MinIOService:
         except S3Error as e:
             logger.error(f"❌ Error ensuring bucket exists: {str(e)}")
             raise
+
+    async def _trigger_lambda(self, bucket_name, object_name):
+        """Asynchronously notify Lambda about uploaded file"""
+        lambda_url = "http://127.0.0.1:3000/hello"  # change to your Lambda URL if needed
+
+        payload = {
+            "Records": [
+                {
+                    "s3": {
+                        "bucket": {"name": bucket_name},
+                        "object": {"key": object_name}
+                    }
+                }
+            ]
+        }
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(lambda_url, json=payload) as response:
+                    result = await response.text()
+                    print(f"📡 Lambda notified for {object_name} → {response.status}: {result}")
+        except Exception as e:
+            print(f"❌ Failed to notify Lambda: {str(e)}")
     
     def upload_file(self, file_obj, object_name, content_type=None):
         """
@@ -84,6 +110,10 @@ class MinIOService:
             )
             
             logger.info(f"✅ File uploaded to MinIO: {object_name}")
+            threading.Thread(
+                target=lambda: asyncio.run(self._trigger_lambda(self.bucket_name, object_name)),
+                daemon=True
+            ).start()
             return True
             
         except S3Error as e:

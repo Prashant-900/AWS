@@ -10,17 +10,57 @@ const MessageInput = ({
 }) => {
   const uploadButtonRef = useRef(null);
   const {
-    uploadedFiles,
-    isUploadPopupOpen,
-    uploadError,
-    isUploading,
-    addFiles,
-    removeFile,
-    clearAllFiles,
-    toggleUploadPopup,
-    closeUploadPopup,
-    uploadFilesToServer
+    uploadedFiles, 
+    isUploadPopupOpen, 
+    uploadError, 
+    isUploading, 
+    addFiles, 
+    removeFile, 
+    clearAllFiles, 
+    toggleUploadPopup, 
+    closeUploadPopup, 
+    uploadFilesToServer 
   } = useFileUpload();
+
+  // When files are selected in the popup we want to add them to the composer and start upload immediately
+  const handleFilesSelected = async (files) => {
+    // addFiles returns the newly created wrappers
+    const newWrappers = addFiles(files) || [];
+
+    if (newWrappers.length === 0) {
+      console.warn('⚠️ No valid files to upload. Check validation errors:', uploadError);
+      return;
+    }
+
+    if (!sessionToken) {
+      console.error('Session token is required for immediate upload');
+      return;
+    }
+
+    try {
+      console.log('📤 Uploading files immediately after selection', { 
+        count: newWrappers.length,
+        files: newWrappers.map(f => ({ name: f.name, type: f.type, size: f.size }))
+      });
+      const result = await uploadFilesToServer(sessionToken, '', newWrappers);
+
+      if (result.success) {
+        console.log('✅ Immediate upload successful', result.data);
+        
+        // Clear uploaded files from preview
+        clearAllFiles();
+        
+        // Notify parent if backend returned a message representing the uploaded files
+        if (onFileUploadSuccess && result.data?.user_message) {
+          onFileUploadSuccess(result.data.user_message);
+        }
+      } else {
+        console.error('❌ Immediate upload failed:', result.error);
+      }
+    } catch (err) {
+      console.error('❌ Error during immediate upload:', err);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,57 +68,21 @@ const MessageInput = ({
     if (isUploading) return; // Prevent multiple submissions
     
     const messageText = newMessage.trim();
-    const hasFiles = uploadedFiles.length > 0;
     
-    // Require text when files are present, or just text without files
+    // Require text to send
     if (!messageText) {
       return;
     }
     
-    // If there are files, upload them first with the text
-    if (hasFiles) {
-      if (!sessionToken) {
-        console.error('Session token is required for file upload');
-        return;
-      }
-
-      try {
-        console.log('📤 Uploading files with text to backend:', { messageText, filesCount: uploadedFiles.length });
-        const uploadResult = await uploadFilesToServer(sessionToken, messageText);
-        
-        if (uploadResult.success) {
-          // Files and text uploaded successfully to backend
-          console.log('✅ Files and text uploaded successfully', uploadResult.data);
-          
-          // Clear the files and text
-          clearAllFiles();
-          onMessageChange({ target: { value: '' } }); // Clear text input
-          
-          // Notify parent component with the uploaded message data
-          if (onFileUploadSuccess && uploadResult.data.user_message) {
-            onFileUploadSuccess(uploadResult.data.user_message);
-          }
-          
-          return;
-        } else {
-          // Upload failed
-          console.error('❌ File upload failed:', uploadResult.error);
-          return;
-        }
-      } catch (error) {
-        console.error('❌ Upload error:', error);
-        return;
-      }
-    }
+    // Send the text-only message via WebSocket
+    console.log('💬 Sending text-only message via WebSocket');
+    onSubmit(e, {
+      message: messageText,
+      files: []
+    });
     
-    // If no files, just send text message via WebSocket
-    if (messageText) {
-      console.log('💬 Sending text-only message via WebSocket');
-      onSubmit(e, {
-        message: messageText,
-        files: []
-      });
-    }
+    // Clear input after sending
+    onMessageChange({ target: { value: '' } });
   };
 
   // Only check for text content, not files (files require text to send)
@@ -191,7 +195,7 @@ const MessageInput = ({
       <UploadPopup
         isOpen={isUploadPopupOpen}
         onClose={closeUploadPopup}
-        onFilesSelected={addFiles}
+        onFilesSelected={handleFilesSelected}
         error={uploadError}
         buttonRef={uploadButtonRef}
       />

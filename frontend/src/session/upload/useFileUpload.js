@@ -17,6 +17,7 @@ const useFileUpload = () => {
   }, []);
 
   // Add files to upload list
+  // Returns the array of newly created file wrappers so callers can act on them immediately
   const addFiles = useCallback((files) => {
     const newFiles = [];
     const errors = [];
@@ -69,6 +70,9 @@ const useFileUpload = () => {
     }
 
     setIsUploadPopupOpen(false);
+
+    // Return the newly created wrappers so caller can trigger upload immediately if desired
+    return newFiles;
   }, [generateFileId]);
 
   // Remove file from upload list
@@ -95,8 +99,12 @@ const useFileUpload = () => {
   }, []);
 
   // Upload files to backend with optional text message
-  const uploadFilesToServer = useCallback(async (sessionToken, messageText = '') => {
-    if (uploadedFiles.length === 0) {
+  // filesToUploadWrappers: optional array of our local file wrapper objects to upload (so caller can pass newly added files)
+  const uploadFilesToServer = useCallback(async (sessionToken, messageText = '', filesToUploadWrappers = null) => {
+    // Check if there are files to upload (either passed explicitly or in state)
+    const wrappers = filesToUploadWrappers && filesToUploadWrappers.length > 0 ? filesToUploadWrappers : uploadedFiles;
+    
+    if (wrappers.length === 0) {
       setUploadError('No files to upload');
       return { success: false, error: 'No files to upload' };
     }
@@ -110,41 +118,62 @@ const useFileUpload = () => {
     setUploadError('');
 
     try {
-      // Mark all files as uploading
+      // Mark files as uploading
+      // If caller passed a subset to upload, mark those as uploading, otherwise mark all
+      const uploadingIds = new Set(wrappers.map(f => f.id));
       setUploadedFiles(prev => 
-        prev.map(file => ({ ...file, uploading: true, error: null }))
+        prev.map(file => uploadingIds.has(file.id) ? { ...file, uploading: true, error: null } : file)
       );
 
       // Extract actual File objects from our file wrappers
-      const filesToUpload = uploadedFiles.map(fileWrapper => fileWrapper.file);
+      const filesToUpload = wrappers.map(fileWrapper => fileWrapper.file);
 
       // Upload to backend with session token and optional text
       const result = await uploadFiles(filesToUpload, sessionToken, messageText);
 
       if (result.success) {
-        // Mark files as uploaded
-        setUploadedFiles(prev => 
-          prev.map(file => ({ 
-            ...file, 
-            uploading: false, 
-            uploaded: true,
-            error: null 
-          }))
-        );
+        // Attach server metadata to the corresponding wrappers when possible
+        // result.data.files is expected to be an array of uploaded file metadata (name, id, url...)
+        const returnedFiles = result.data?.files || [];
 
-        return { 
-          success: true, 
+        setUploadedFiles(prev => {
+          // For each prev file, if it matches one of the returnedFiles by name+size, attach server metadata
+          return prev.map(local => {
+            const match = returnedFiles.find(r => r.name === local.name && (r.size == null || r.size === local.size));
+            if (match) {
+              return {
+                ...local,
+                uploading: false,
+                uploaded: true,
+                error: null,
+                serverId: match.id || match.file_id || match.fileId || null,
+                serverUrl: match.url || match.download_url || match.file_url || null,
+                serverMeta: match
+              };
+            }
+            // If wrapper was uploaded in this batch but server didn't return a match, still mark uploaded true
+            if (wrappers.some(w => w.id === local.id)) {
+              return { ...local, uploading: false, uploaded: true, error: null };
+            }
+            return local;
+          });
+        });
+
+        return {
+          success: true,
           data: result.data,
-          uploadedFiles: result.data.files 
+          uploadedFiles: result.data.files
         };
       } else {
         // Mark files as failed
+        // Mark the impacted wrappers as failed
+        const failedIds = (filesToUploadWrappers && filesToUploadWrappers.length > 0) ? new Set(filesToUploadWrappers.map(f => f.id)) : null;
         setUploadedFiles(prev => 
           prev.map(file => ({ 
             ...file, 
             uploading: false, 
             uploaded: false,
-            error: result.error 
+            error: failedIds ? (failedIds.has(file.id) ? result.error : file.error) : result.error 
           }))
         );
 
@@ -154,13 +183,14 @@ const useFileUpload = () => {
     } catch {
       const errorMessage = 'Failed to upload files';
       
-      // Mark files as failed
+      // Mark the impacted wrappers as failed
+      const failedIds = (filesToUploadWrappers && filesToUploadWrappers.length > 0) ? new Set(filesToUploadWrappers.map(f => f.id)) : null;
       setUploadedFiles(prev => 
         prev.map(file => ({ 
           ...file, 
           uploading: false, 
           uploaded: false,
-          error: errorMessage 
+          error: failedIds ? (failedIds.has(file.id) ? errorMessage : file.error) : errorMessage 
         }))
       );
 

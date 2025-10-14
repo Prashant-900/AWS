@@ -31,13 +31,6 @@ class FileUploadView(APIView):
             session_token = request.data.get('session_token')
             message_text = request.data.get('message_text', '').strip()
             
-            # Validate input - require text when files are present
-            if files and not message_text:
-                return Response(
-                    {'error': 'Message text is required when uploading files'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
             # Require either files or text
             if not files and not message_text:
                 return Response(
