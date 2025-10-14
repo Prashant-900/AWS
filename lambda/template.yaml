@@ -1,0 +1,27 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Simple Python Lambda with API Gateway
+
+Globals:
+  Function:
+    Timeout: 10
+    MemorySize: 128
+
+Resources:
+  ApiGatewayFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: apigateway.fetch_data
+      Runtime: python3.12
+      CodeUri: ./apigateway
+      Events:
+        HelloWorld:
+          Type: Api
+          Properties:
+            Path: /hello
+            Method: get
+
+Outputs:
+  ApiUrl:
+    Description: "Invoke URL"
+    Value: "http://127.0.0.1:3000/hello"
