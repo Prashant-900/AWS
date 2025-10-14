@@ -49,13 +49,15 @@ class AuthenticationMixin:
 
     @database_sync_to_async
     def verify_session(self):
-        """Verify that the session belongs to the authenticated user"""
+        """Verify that the session belongs to the authenticated user using session_token"""
         try:
-            ChatSession.objects.get(id=self.session_id, user=self.user)
-            logger.info(f"Session {self.session_id} verified for user {self.user.id}")
+            session = ChatSession.objects.get(session_token=self.session_token, user=self.user)
+            # Store the actual session ID for internal use
+            self.session_id = session.id
+            logger.info(f"Session {self.session_token} verified for user {self.user.id}")
             return True
         except ChatSession.DoesNotExist:
-            logger.warning(f"Session {self.session_id} not found or doesn't belong to user {self.user.id}")
+            logger.warning(f"Session {self.session_token} not found or doesn't belong to user {self.user.id}")
             return False
 
     async def handle_authenticate(self, data):

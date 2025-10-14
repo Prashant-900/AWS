@@ -14,7 +14,7 @@ import {
  * This hook has been refactored into smaller, focused pieces for better maintainability
  */
 const useSessionLogic = () => {
-  const { sessionId } = useParams();
+  const { sessionToken } = useParams();
   const navigate = useNavigate();
 
   // Initialize all sub-hooks
@@ -49,6 +49,7 @@ const useSessionLogic = () => {
     clearMessages,
     setStreamingMessage,
     clearStreamingMessage,
+    addUploadedMessage,
     setMessagesError,
     setMessagesLoading
   } = useMessagesManager();
@@ -74,7 +75,7 @@ const useSessionLogic = () => {
     sendWebSocketMessage,
     connectionStatus,
     setWsError
-  } = useWebSocketManager(sessionId, currentSession);
+  } = useWebSocketManager(sessionToken, currentSession);
 
   const {
     handleSendMessage,
@@ -108,15 +109,15 @@ const useSessionLogic = () => {
   // Handle session changes and message loading
   useEffect(() => {
     console.log('🎯 useSessionLogic: Session/messages effect triggered', { 
-      sessionId, 
+      sessionToken, 
       sessionsLength: sessions.length 
     });
     
-    if (sessionId && sessionId !== 'new' && sessions.length > 0) {
-      const session = selectSession(sessionId, sessions);
+    if (sessionToken && sessionToken !== 'new' && sessions.length > 0) {
+      const session = selectSession(sessionToken, sessions);
       if (session) {
-        console.log('🎯 useSessionLogic: Loading messages for session', sessionId);
-        loadSessionMessages(sessionId);
+        console.log('🎯 useSessionLogic: Loading messages for session', sessionToken);
+        loadSessionMessages(sessionToken);
       }
     } else {
       console.log('🎯 useSessionLogic: Clearing messages and session');
@@ -125,12 +126,21 @@ const useSessionLogic = () => {
     }
     // Clear streaming message when switching sessions
     clearStreamingMessage();
-  }, [sessionId, sessions, selectSession, loadSessionMessages, clearMessages, clearCurrentSession, clearStreamingMessage]);
+  }, [sessionToken, sessions, selectSession, loadSessionMessages, clearMessages, clearCurrentSession, clearStreamingMessage]);
 
   // Enhanced message sending handler
-  const enhancedHandleSendMessage = async (e) => {
+  const enhancedHandleSendMessage = async (e, data = null) => {
     e.preventDefault();
-    const messageContent = getMessage();
+    
+    // Handle new data format with files or fallback to old format
+    const messageContent = data?.message || getMessage();
+    const attachedFiles = data?.files || [];
+    
+    console.log('📎 Sending message with files:', {
+      messageContent,
+      filesCount: attachedFiles.length,
+      files: attachedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
+    });
     
     await handleSendMessage(messageContent, connectionStatus, currentSession, {
       addUserMessage,
@@ -143,7 +153,7 @@ const useSessionLogic = () => {
         setUserError(error);
         setSessionsError(error);
       }
-    });
+    }, attachedFiles);
   };
 
   // Enhanced session creation handler
@@ -177,7 +187,7 @@ const useSessionLogic = () => {
 
   return {
     // Session state
-    sessionId,
+    sessionToken,
     user,
     sessions,
     currentSession,
@@ -198,7 +208,8 @@ const useSessionLogic = () => {
     handleLogout: enhancedHandleLogout,
     handleSessionSelect: enhancedHandleSessionSelect,
     handleMessageChange,
-    formatTime
+    formatTime,
+    addUploadedMessage
   };
 };
 

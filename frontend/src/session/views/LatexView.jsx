@@ -8,7 +8,6 @@ import { InlineMath, BlockMath } from 'react-katex';
  */
 const LatexView = ({ content, isStreaming, onCopy }) => {
   const [copied, setCopied] = useState(false);
-  const [renderError, setRenderError] = useState(null);
 
   const handleCopy = () => {
     if (onCopy) {
@@ -23,21 +22,35 @@ const LatexView = ({ content, isStreaming, onCopy }) => {
 
   const renderMath = () => {
     try {
-      setRenderError(null);
+      // Strip LaTeX delimiters if present
+      let mathContent = content.trim();
+      
+      // Remove inline math delimiters: $...$ or \(...\)
+      if (mathContent.startsWith('$') && mathContent.endsWith('$') && !mathContent.startsWith('$$')) {
+        mathContent = mathContent.slice(1, -1);
+      } else if (mathContent.startsWith('\\(') && mathContent.endsWith('\\)')) {
+        mathContent = mathContent.slice(2, -2);
+      }
+      // Remove block math delimiters: $$...$$ or \[...\]
+      else if (mathContent.startsWith('$$') && mathContent.endsWith('$$')) {
+        mathContent = mathContent.slice(2, -2);
+      } else if (mathContent.startsWith('\\[') && mathContent.endsWith('\\]')) {
+        mathContent = mathContent.slice(2, -2);
+      }
       
       // Check if it's inline or block math
-      const isBlock = content.includes('\\begin{') || 
-                     content.includes('\\\\') || 
-                     content.includes('\\align') ||
-                     content.length > 50;
+      const isBlock = mathContent.includes('\\begin{') || 
+                     mathContent.includes('\\\\') || 
+                     mathContent.includes('\\align') ||
+                     mathContent.length > 50;
 
       if (isBlock) {
-        return <BlockMath math={content} />;
+        return <BlockMath math={mathContent} />;
       } else {
-        return <InlineMath math={content} />;
+        return <InlineMath math={mathContent} />;
       }
     } catch (error) {
-      setRenderError(error.message);
+      // Return error UI directly without setting state
       return (
         <div className="math-error">
           <div className="error-message">Math Rendering Error:</div>
@@ -56,9 +69,6 @@ const LatexView = ({ content, isStreaming, onCopy }) => {
       <div className="latex-header">
         <span className="format-tag">LaTeX</span>
         <div className="latex-actions">
-          {renderError && (
-            <span className="error-indicator" title={renderError}>⚠️</span>
-          )}
           {!isStreaming && (
             <button 
               className="copy-button"

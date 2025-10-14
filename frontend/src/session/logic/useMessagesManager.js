@@ -10,8 +10,8 @@ export const useMessagesManager = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const loadSessionMessages = useCallback(async (sessionId) => {
-    if (!sessionId || sessionId === 'new') {
+  const loadSessionMessages = useCallback(async (sessionToken) => {
+    if (!sessionToken || sessionToken === 'new') {
       setMessages([]);
       setLoading(false);
       return;
@@ -20,11 +20,11 @@ export const useMessagesManager = () => {
     try {
       setLoading(true);
       setError(''); // Clear any previous errors
-      console.log(`📥 Loading messages for session ${sessionId}`);
+      console.log(`📥 Loading messages for session ${sessionToken}`);
       
-      const messagesData = await getSessionMessages(sessionId);
+      const messagesData = await getSessionMessages(sessionToken);
       setMessages(messagesData);
-      console.log(`✅ Loaded ${messagesData.length} messages for session ${sessionId}`);
+      console.log(`✅ Loaded ${messagesData.length} messages for session ${sessionToken}`);
       
       return messagesData;
     } catch (err) {
@@ -84,6 +84,20 @@ export const useMessagesManager = () => {
     setStreamingMessage(null);
   }, []);
 
+  const addUploadedMessage = useCallback((messageData) => {
+    // Add a message that was uploaded with files to the messages list
+    const message = {
+      id: messageData.id,
+      content: messageData.content,
+      sender: messageData.sender,
+      timestamp: messageData.timestamp,
+      files: messageData.files || []
+    };
+
+    setMessages(prev => [...prev, message]);
+    console.log('📤 Uploaded message added to messages:', message.id);
+  }, []);
+
   return {
     messages,
     streamingMessage,
@@ -96,6 +110,7 @@ export const useMessagesManager = () => {
     clearMessages,
     setStreamingMessage,
     clearStreamingMessage,
+    addUploadedMessage,
     setMessagesError: setError,
     setMessagesLoading: setLoading
   };

@@ -43,6 +43,24 @@ class MessageHandlerMixin:
             logger.error(f"❌ Chat message error: {str(e)}")
             await self.send_error('Failed to process message')
 
+    async def chat_message(self, event):
+        """
+        Handler for messages broadcast from channel layer (e.g., from file uploads).
+        This is called when a message is sent to the group via channel_layer.group_send()
+        """
+        try:
+            message_data = event.get('message', {})
+            
+            # Broadcast the message to the WebSocket client
+            await self.send(text_data=json.dumps({
+                'type': 'message_received',
+                'message': message_data
+            }))
+            
+            logger.info(f"Broadcasted message {message_data.get('id')} to WebSocket client")
+        except Exception as e:
+            logger.error(f"❌ Error broadcasting message: {str(e)}")
+
     @database_sync_to_async
     def save_message(self, sender, content):
         """Save message to database"""

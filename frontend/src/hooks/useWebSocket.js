@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ACCESS_TOKEN } from '../constants';
 
-const useWebSocket = (sessionId, onMessage, onError) => {
+const useWebSocket = (sessionToken, onMessage, onError) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isStreaming, setIsStreaming] = useState(false);
   const ws = useRef(null);
@@ -9,24 +9,24 @@ const useWebSocket = (sessionId, onMessage, onError) => {
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
   const heartbeatInterval = useRef(null);
-  const currentSessionId = useRef(sessionId);
+  const currentSessionToken = useRef(sessionToken);
   const onMessageRef = useRef(onMessage);
   const onErrorRef = useRef(onError);
   
-  // Update current session ID and callbacks
+  // Update current session token and callbacks
   useEffect(() => {
-    currentSessionId.current = sessionId;
+    currentSessionToken.current = sessionToken;
     onMessageRef.current = onMessage;
     onErrorRef.current = onError;
-  }, [sessionId, onMessage, onError]);
+  }, [sessionToken, onMessage, onError]);
 
   // Get WebSocket URL
   const getWebSocketUrl = useCallback(() => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
     const port = '8000'; // Django default port
-    return `${protocol}//${host}:${port}/ws/chat/${sessionId}/`;
-  }, [sessionId]);
+    return `${protocol}//${host}:${port}/ws/chat/${sessionToken}/`;
+  }, [sessionToken]);
 
   // Send heartbeat to keep connection alive
   const sendHeartbeat = useCallback(() => {
@@ -37,7 +37,7 @@ const useWebSocket = (sessionId, onMessage, onError) => {
 
   // Connect to WebSocket
   const connect = useCallback(() => {
-    if (!sessionId) return;
+    if (!sessionToken) return;
 
     try {
       const token = localStorage.getItem(ACCESS_TOKEN);
@@ -53,7 +53,7 @@ const useWebSocket = (sessionId, onMessage, onError) => {
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
-        console.log(`WebSocket connected for session: ${sessionId}`);
+        console.log(`WebSocket connected for session: ${sessionToken}`);
         setConnectionStatus('connected');
         reconnectAttempts.current = 0;
 
@@ -140,7 +140,7 @@ const useWebSocket = (sessionId, onMessage, onError) => {
       };
 
       ws.current.onclose = (event) => {
-        console.log(`WebSocket disconnected for session ${sessionId}:`, event.code, event.reason);
+        console.log(`WebSocket disconnected for session ${sessionToken}:`, event.code, event.reason);
         setConnectionStatus('disconnected');
         setIsStreaming(false);
         
@@ -152,12 +152,12 @@ const useWebSocket = (sessionId, onMessage, onError) => {
         // Only attempt reconnection if it's not a normal closure and session hasn't changed
         if (event.code !== 1000 && 
             reconnectAttempts.current < maxReconnectAttempts && 
-            currentSessionId.current === sessionId) {
+            currentSessionToken.current === sessionToken) {
           const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-          console.log(`Attempting to reconnect to session ${sessionId} in ${timeout}ms...`);
+          console.log(`Attempting to reconnect to session ${sessionToken} in ${timeout}ms...`);
           
           reconnectTimeout.current = setTimeout(() => {
-            if (currentSessionId.current === sessionId) { // Double-check session hasn't changed
+            if (currentSessionToken.current === sessionToken) { // Double-check session hasn't changed
               reconnectAttempts.current++;
               connect();
             }
@@ -177,7 +177,7 @@ const useWebSocket = (sessionId, onMessage, onError) => {
       setConnectionStatus('error');
       onErrorRef.current?.('Failed to create WebSocket connection');
     }
-  }, [sessionId, getWebSocketUrl, sendHeartbeat]);
+  }, [sessionToken, getWebSocketUrl, sendHeartbeat]);
 
   // Disconnect from WebSocket
   const disconnect = useCallback(() => {
@@ -227,9 +227,9 @@ const useWebSocket = (sessionId, onMessage, onError) => {
     disconnectRef.current = disconnect;
   });
 
-  // Connect when sessionId changes
+  // Connect when sessionToken changes
   useEffect(() => {
-    if (sessionId) {
+    if (sessionToken) {
       // Add small delay to prevent rapid reconnections
       const timer = setTimeout(() => {
         connectRef.current();
@@ -242,7 +242,7 @@ const useWebSocket = (sessionId, onMessage, onError) => {
     } else {
       disconnectRef.current();
     }
-  }, [sessionId]);
+  }, [sessionToken]);
 
   // Cleanup on unmount
   useEffect(() => {

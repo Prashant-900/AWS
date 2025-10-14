@@ -16,10 +16,16 @@ const ProtectedRoute = ({ children }) => {
         setisAuthorized(true);
         return;
       } else {
+        // Clear invalid tokens
+        localStorage.removeItem(ACCESS_TOKEN);
+        localStorage.removeItem(REFRESH_TOKEN);
         setisAuthorized(false);
       }
     } catch (error) {
-      console.log(error);
+      console.log('Token refresh failed:', error);
+      // Clear invalid tokens when refresh fails (e.g., user doesn't exist)
+      localStorage.removeItem(ACCESS_TOKEN);
+      localStorage.removeItem(REFRESH_TOKEN);
       setisAuthorized(false);
     }
   }, []);

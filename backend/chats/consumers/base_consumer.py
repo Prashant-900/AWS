@@ -33,18 +33,19 @@ class ChatConsumer(
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.session_id = None
+        self.session_token = None
+        self.session_id = None  # Internal DB ID, set after verification
         self.session_group_name = None
         self.user = None
 
     async def connect(self):
         """Handle WebSocket connection"""
         try:
-            # Extract session ID from URL
-            self.session_id = self.scope['url_route']['kwargs']['session_id']
-            self.session_group_name = f'chat_{self.session_id}'
+            # Extract session token from URL
+            self.session_token = self.scope['url_route']['kwargs']['session_token']
+            self.session_group_name = f'chat_{self.session_token}'
             
-            self.log_connection_event("Connection attempt", f"Session ID: {self.session_id}")
+            self.log_connection_event("Connection attempt", f"Session Token: {self.session_token}")
             
             # Authenticate user
             user = await self.authenticate_user()
@@ -73,7 +74,7 @@ class ChatConsumer(
             await self.start_heartbeat()
             
             # Send connection confirmation
-            await self.send_connection_status('connected', self.session_id)
+            await self.send_connection_status('connected', str(self.session_token))
             
             self.log_connection_event("Connected successfully")
             

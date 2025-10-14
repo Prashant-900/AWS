@@ -14,10 +14,10 @@ const MermaidView = ({ content, isStreaming, onCopy }) => {
   const mermaidRef = useRef(null);
   const mermaidId = useRef(`mermaid-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
 
+  // Initialize mermaid once on mount
   useEffect(() => {
-    // Initialize mermaid
     mermaid.initialize({
-      startOnLoad: true,
+      startOnLoad: false, // We'll manually trigger rendering
       theme: 'default',
       themeVariables: {
         primaryColor: '#4f46e5',
@@ -64,9 +64,14 @@ const MermaidView = ({ content, isStreaming, onCopy }) => {
     }
   }, [isStreaming]);
 
+  // Render mermaid diagram when content changes or tab switches to render
   useEffect(() => {
-    if (!isStreaming && activeTab === 'render') {
-      renderMermaid(editableContent);
+    if (!isStreaming && activeTab === 'render' && editableContent.trim()) {
+      // Small delay to ensure DOM is ready and mermaid is initialized
+      const timer = setTimeout(() => {
+        renderMermaid(editableContent);
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [editableContent, activeTab, isStreaming, renderMermaid]);
 

@@ -10,7 +10,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Auth />} /> 
-        <Route path="/session/:sessionId" element={
+        <Route path="/session/:sessionToken" element={
           <ProtectedRoute>
             <Session />
           </ProtectedRoute>

@@ -1,49 +1,200 @@
-import React from 'react';
+import React, { useRef } from 'react';
+import { UploadButton, UploadPopup, FilePreview, useFileUpload } from './upload';
 
 const MessageInput = ({ 
   newMessage, 
   onMessageChange, 
-  onSubmit 
+  onSubmit,
+  sessionToken = null, // Session token for file uploads
+  onFileUploadSuccess = null // Callback when files are uploaded successfully
 }) => {
+  const uploadButtonRef = useRef(null);
+  const {
+    uploadedFiles,
+    isUploadPopupOpen,
+    uploadError,
+    isUploading,
+    addFiles,
+    removeFile,
+    clearAllFiles,
+    toggleUploadPopup,
+    closeUploadPopup,
+    uploadFilesToServer
+  } = useFileUpload();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (isUploading) return; // Prevent multiple submissions
+    
+    const messageText = newMessage.trim();
+    const hasFiles = uploadedFiles.length > 0;
+    
+    // Require text when files are present, or just text without files
+    if (!messageText) {
+      return;
+    }
+    
+    // If there are files, upload them first with the text
+    if (hasFiles) {
+      if (!sessionToken) {
+        console.error('Session token is required for file upload');
+        return;
+      }
+
+      try {
+        console.log('📤 Uploading files with text to backend:', { messageText, filesCount: uploadedFiles.length });
+        const uploadResult = await uploadFilesToServer(sessionToken, messageText);
+        
+        if (uploadResult.success) {
+          // Files and text uploaded successfully to backend
+          console.log('✅ Files and text uploaded successfully', uploadResult.data);
+          
+          // Clear the files and text
+          clearAllFiles();
+          onMessageChange({ target: { value: '' } }); // Clear text input
+          
+          // Notify parent component with the uploaded message data
+          if (onFileUploadSuccess && uploadResult.data.user_message) {
+            onFileUploadSuccess(uploadResult.data.user_message);
+          }
+          
+          return;
+        } else {
+          // Upload failed
+          console.error('❌ File upload failed:', uploadResult.error);
+          return;
+        }
+      } catch (error) {
+        console.error('❌ Upload error:', error);
+        return;
+      }
+    }
+    
+    // If no files, just send text message via WebSocket
+    if (messageText) {
+      console.log('💬 Sending text-only message via WebSocket');
+      onSubmit(e, {
+        message: messageText,
+        files: []
+      });
+    }
+  };
+
+  // Only check for text content, not files (files require text to send)
+  const hasContent = newMessage.trim();
+
   return (
     <div style={{ 
-      padding: '20px', 
-      borderTop: '1px solid #ddd',
       backgroundColor: 'white',
       width: '100%',
       boxSizing: 'border-box'
     }}>
-      <form onSubmit={onSubmit} style={{ display: 'flex', gap: '10px' }}>
-        <input
-          type="text"
-          value={newMessage}
-          onChange={onMessageChange}
-          placeholder="Type your message..."
-          style={{
-            flex: 1,
-            padding: '12px',
-            border: '1px solid #ddd',
-            borderRadius: '25px',
-            outline: 'none'
-          }}
-        />
-        <button
-          type="submit"
-          disabled={!newMessage.trim()}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '25px',
-            cursor: 'pointer',
-            opacity: !newMessage.trim() ? 0.5 : 1,
-            transition: 'all 0.2s ease'
-          }}
-        >
-          Send
-        </button>
-      </form>
+      {/* File Preview Area */}
+      <FilePreview
+        files={uploadedFiles}
+        onRemoveFile={removeFile}
+        onClearAll={clearAllFiles}
+      />
+
+      {/* Input Area */}
+      <div style={{ 
+        padding: '20px', 
+        borderTop: uploadedFiles.length > 0 ? 'none' : '1px solid #ddd'
+      }}>
+        <form onSubmit={handleSubmit} style={{ 
+          display: 'flex', 
+          gap: '10px',
+          alignItems: 'flex-end'
+        }}>
+          {/* Upload Button */}
+          <UploadButton 
+            ref={uploadButtonRef}
+            onClick={toggleUploadPopup}
+            disabled={false}
+          />
+
+          {/* Text Input */}
+          <div style={{ flex: 1, position: 'relative' }}>
+            <input
+              type="text"
+              value={newMessage}
+              onChange={onMessageChange}
+              placeholder="Type your message..."
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                border: '1px solid #ddd',
+                borderRadius: '25px',
+                outline: 'none',
+                fontSize: '14px',
+                transition: 'border-color 0.2s ease',
+                boxSizing: 'border-box'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#007bff';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#ddd';
+              }}
+            />
+          </div>
+
+          {/* Send Button */}
+          <button
+            type="submit"
+            disabled={!hasContent || isUploading}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: hasContent && !isUploading ? '#007bff' : '#f5f5f5',
+              color: hasContent && !isUploading ? 'white' : '#999',
+              border: 'none',
+              borderRadius: '25px',
+              cursor: hasContent && !isUploading ? 'pointer' : 'not-allowed',
+              transition: 'all 0.2s ease',
+              fontSize: '14px',
+              fontWeight: '500',
+              minWidth: '70px'
+            }}
+            onMouseEnter={(e) => {
+              if (hasContent && !isUploading) {
+                e.target.style.backgroundColor = '#0056b3';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (hasContent && !isUploading) {
+                e.target.style.backgroundColor = '#007bff';
+              }
+            }}
+          >
+            {isUploading ? 'Uploading...' : 'Send'}
+          </button>
+        </form>
+
+        {/* File count indicator */}
+        {uploadedFiles.length > 0 && (
+          <div style={{
+            fontSize: '12px',
+            color: isUploading ? '#007bff' : '#666',
+            marginTop: '8px',
+            textAlign: 'center'
+          }}>
+            {isUploading 
+              ? `Uploading ${uploadedFiles.length} file${uploadedFiles.length !== 1 ? 's' : ''}...`
+              : `${uploadedFiles.length} file${uploadedFiles.length !== 1 ? 's' : ''} ready to send`
+            }
+          </div>
+        )}
+      </div>
+
+      {/* Upload Popup */}
+      <UploadPopup
+        isOpen={isUploadPopupOpen}
+        onClose={closeUploadPopup}
+        onFilesSelected={addFiles}
+        error={uploadError}
+        buttonRef={uploadButtonRef}
+      />
     </div>
   );
 };

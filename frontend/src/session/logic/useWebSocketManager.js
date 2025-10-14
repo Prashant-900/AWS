@@ -4,7 +4,7 @@ import useWebSocket from '../../hooks/useWebSocket';
 /**
  * Hook for managing WebSocket connection and message streaming
  */
-export const useWebSocketManager = (sessionId, currentSession) => {
+export const useWebSocketManager = (sessionToken, currentSession) => {
   const [wsConnectionStatus, setWsConnectionStatus] = useState('disconnected');
   const [error, setError] = useState('');
 
@@ -13,7 +13,7 @@ export const useWebSocketManager = (sessionId, currentSession) => {
     console.log('🎯 handleWebSocketMessage called with:', data);
     
     // Only handle messages for current session
-    if (!sessionId || sessionId === 'new') {
+    if (!sessionToken || sessionToken === 'new') {
       console.log('❌ Ignoring message - no active session');
       return;
     }
@@ -22,7 +22,7 @@ export const useWebSocketManager = (sessionId, currentSession) => {
     
     switch (data.type) {
       case 'stream_start':
-        console.log('🚀 Starting new streaming message for session:', sessionId);
+        console.log('🚀 Starting new streaming message for session:', sessionToken);
         setError(''); // Clear any timeout errors
         
         // Clear timeout if it exists
@@ -37,7 +37,7 @@ export const useWebSocketManager = (sessionId, currentSession) => {
           sender: 'ai',
           timestamp: new Date().toISOString(),
           isStreaming: true,
-          sessionId: sessionId // Track which session this belongs to
+          sessionToken: sessionToken // Track which session this belongs to
         });
         break;
         
@@ -45,7 +45,7 @@ export const useWebSocketManager = (sessionId, currentSession) => {
         console.log('📝 Adding chunk to streaming message:', data.content);
         setStreamingMessage(prev => {
           // Only update if message belongs to current session
-          if (prev && (prev.id === data.message_id || prev.id === data.messageId) && prev.sessionId === sessionId) {
+          if (prev && (prev.id === data.message_id || prev.id === data.messageId) && prev.sessionToken === sessionToken) {
             return { ...prev, content: prev.content + data.content };
           }
           // Create new streaming message if none exists for current session
@@ -56,7 +56,7 @@ export const useWebSocketManager = (sessionId, currentSession) => {
               sender: 'ai',
               timestamp: new Date().toISOString(),
               isStreaming: true,
-              sessionId: sessionId
+              sessionToken: sessionToken
             };
           }
           return prev; // Keep existing if not for current session
@@ -64,10 +64,10 @@ export const useWebSocketManager = (sessionId, currentSession) => {
         break;
         
       case 'stream_end':
-        console.log('✅ Ending streaming message for session:', sessionId, data);
+        console.log('✅ Ending streaming message for session:', sessionToken, data);
         setStreamingMessage(prev => {
           // Only process if message belongs to current session
-          if (prev && prev.sessionId === sessionId) {
+          if (prev && prev.sessionToken === sessionToken) {
             const finalMessage = {
               id: data.message?.id || data.message_id || `ai_${Date.now()}`,
               content: data.final_content || data.finalContent || prev.content || '',
@@ -90,7 +90,7 @@ export const useWebSocketManager = (sessionId, currentSession) => {
       default:
         console.log('❓ Unknown WebSocket message type:', data);
     }
-  }, [sessionId]);
+  }, [sessionToken]);
 
   // WebSocket error handler
   const handleWebSocketError = useCallback((errorMessage, messageHandlers) => {
@@ -103,12 +103,12 @@ export const useWebSocketManager = (sessionId, currentSession) => {
   }, []);
 
   // WebSocket connection for real-time messaging (only when session is valid)
-  const shouldConnect = sessionId && sessionId !== 'new' && currentSession;
+  const shouldConnect = sessionToken && sessionToken !== 'new' && currentSession;
   const { 
     connectionStatus,
     sendMessage: sendWebSocketMessage 
   } = useWebSocket(
-    shouldConnect ? sessionId : null,
+    shouldConnect ? sessionToken : null,
     (data) => handleWebSocketMessage(data, window.messageHandlers || {}),
     (error) => handleWebSocketError(error, window.messageHandlers || {})
   );

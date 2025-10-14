@@ -9,7 +9,7 @@ import { useWhyDidYouUpdate } from '../hooks/useWhyDidYouUpdate';
 export default function Session() {
   const sessionLogicData = useSessionLogic();
   const {
-    sessionId,
+    sessionToken,
     user,
     sessions,
     currentSession,
@@ -24,14 +24,15 @@ export default function Session() {
     handleLogout,
     handleSessionSelect,
     handleMessageChange,
-    formatTime
+    formatTime,
+    addUploadedMessage
   } = sessionLogicData;
 
   // Debug re-renders
   useWhyDidYouUpdate('Session', sessionLogicData);
   
   console.log('🎬 Session component rendered with:', {
-    sessionId,
+    sessionToken,
     wsConnectionStatus,
     messagesCount: messages.length,
     sessionsCount: sessions.length,
@@ -40,7 +41,7 @@ export default function Session() {
   });
 
   // Show error message if there's a general error
-  if (error && !sessionId) {
+  if (error && !sessionToken) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -121,7 +122,7 @@ export default function Session() {
         overflow: 'hidden'
       }}>
         <ChatArea
-          sessionId={sessionId}
+          sessionToken={sessionToken}
           messages={messages}
           loading={loading}
           error={error}
@@ -131,12 +132,14 @@ export default function Session() {
         />
       </div>
 
-      {(sessionId && sessionId !== 'new') || (!sessionId && currentSession) ? (
+      {(sessionToken && sessionToken !== 'new') || (!sessionToken && currentSession) ? (
         <div style={{ gridArea: 'textfield' }}>
           <MessageInput
             newMessage={newMessage}
             onMessageChange={handleMessageChange}
             onSubmit={handleSendMessage}
+            sessionToken={sessionToken || currentSession?.session_token}
+            onFileUploadSuccess={addUploadedMessage}
           />
         </div>
       ) : null}

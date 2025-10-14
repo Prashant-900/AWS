@@ -84,20 +84,20 @@ const Sidebar = ({
         ) : (
           sessions.map((session) => (
             <div
-              key={session.id}
-              onClick={() => onSessionSelect(session.id)}
+              key={session.session_token}
+              onClick={() => onSessionSelect(session.session_token)}
               style={{
                 padding: '12px',
-                backgroundColor: currentSession?.id === session.id ? '#007bff' : 'white',
-                color: currentSession?.id === session.id ? 'white' : 'black',
+                backgroundColor: currentSession?.session_token === session.session_token ? '#007bff' : 'white',
+                color: currentSession?.session_token === session.session_token ? 'white' : 'black',
                 border: '1px solid #e9ecef',
                 borderRadius: '8px',
                 marginBottom: '8px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                boxShadow: currentSession?.id === session.id ? '0 2px 4px rgba(0,123,255,0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
+                boxShadow: currentSession?.session_token === session.session_token ? '0 2px 4px rgba(0,123,255,0.3)' : '0 1px 3px rgba(0,0,0,0.1)',
                 ':hover': {
-                  backgroundColor: currentSession?.id === session.id ? '#0056b3' : '#f8f9fa'
+                  backgroundColor: currentSession?.session_token === session.session_token ? '#0056b3' : '#f8f9fa'
                 }
               }}
             >
@@ -109,7 +109,7 @@ const Sidebar = ({
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap'
               }}>
-                {session.session_name || `Chat ${session.id}`}
+                {session.session_name || 'New Chat'}
               </div>
               <div style={{ 
                 fontSize: '12px', 

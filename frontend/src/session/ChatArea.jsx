@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { ResponseRenderer } from './views';
+import FileAttachment from './FileAttachment';
 
 const ChatArea = ({ 
-  sessionId, 
+  sessionToken, 
   messages, 
   loading, 
   error,
@@ -51,7 +52,7 @@ const ChatArea = ({
     );
   }
 
-  if (sessionId === 'new' || !sessionId) {
+  if (sessionToken === 'new' || !sessionToken) {
     return (
       <div style={{ 
         width: '100%',
@@ -100,7 +101,7 @@ const ChatArea = ({
     : messages;
     
   console.log('📊 ChatArea render:', {
-    sessionId,
+    sessionToken,
     messagesCount: messages.length,
     streamingMessage: streamingMessage?.content?.substring(0, 50),
     hasStreamingContent,
@@ -118,7 +119,7 @@ const ChatArea = ({
         overflow: 'hidden'
       }}>
       {/* Connection Status Indicator */}
-      {sessionId && sessionId !== 'new' && connectionStatus === 'connecting' && (
+      {sessionToken && sessionToken !== 'new' && connectionStatus === 'connecting' && (
         <div style={{
           padding: '4px 16px',
           textAlign: 'center',
@@ -165,7 +166,7 @@ const ChatArea = ({
           )}
             {allMessages.map((message, index) => (
               <div
-                key={`${sessionId}-${message.id || message.message_id || `temp-${index}`}`}
+                key={`${sessionToken}-${message.id || message.message_id || `temp-${index}`}`}
                 style={{
                   marginBottom: '15px',
                   display: 'flex',
@@ -183,13 +184,23 @@ const ChatArea = ({
                   }}
                 >
                   {message.sender === 'user' ? (
-                    // User messages: simple bubble style
+                    // User messages: simple bubble style with file attachments
                     <div style={{
                       padding: '12px 16px',
                       borderRadius: '18px',
                       backgroundColor: '#007bff',
                       color: 'white'
                     }}>
+                      {/* Display file attachments above message text */}
+                      {message.files && message.files.length > 0 && (
+                        <div style={{ marginBottom: '8px' }}>
+                          {message.files.map((file) => (
+                            <FileAttachment key={file.id} file={file} />
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Message text */}
                       <div style={{ 
                         marginBottom: '4px',
                         whiteSpace: 'pre-wrap'

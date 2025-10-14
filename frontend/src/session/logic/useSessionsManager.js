@@ -31,10 +31,10 @@ export const useSessionsManager = () => {
       setError(''); // Clear any previous errors
       const newSessionData = await createSession();
       setSessions(prevSessions => [newSessionData, ...prevSessions]);
-      console.log('✅ New session created:', newSessionData.id);
+      console.log('✅ New session created:', newSessionData.session_token);
       
       if (navigate) {
-        navigate(`/session/${newSessionData.id}`);
+        navigate(`/session/${newSessionData.session_token}`);
       }
       
       return newSessionData;
@@ -47,10 +47,10 @@ export const useSessionsManager = () => {
     }
   };
 
-  const selectSession = useCallback((sessionId, sessionsList) => {
-    const session = (sessionsList || sessions).find(s => s.id === parseInt(sessionId));
+  const selectSession = useCallback((sessionToken, sessionsList) => {
+    const session = (sessionsList || sessions).find(s => s.session_token === sessionToken);
     setCurrentSession(session);
-    console.log('📌 Session selected:', session?.id);
+    console.log('📌 Session selected:', session?.session_token);
     return session;
   }, [sessions]);
 

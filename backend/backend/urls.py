@@ -9,4 +9,5 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls')),
     path('user/', include('user.urls')),
     path('chats/', include('chats.urls')),
+    path('uploads/', include('uploads.urls')),
 ]

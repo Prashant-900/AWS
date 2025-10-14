@@ -26,9 +26,9 @@ export const createSession = async (sessionName = 'New Chat') => {
   }
 };
 
-export const getSessionMessages = async (sessionId) => {
+export const getSessionMessages = async (sessionToken) => {
   try {
-    const response = await api.get(`/chats/${sessionId}/messages/`);
+    const response = await api.get(`/chats/${sessionToken}/messages/`);
     return response.data;
   } catch (error) {
     if (error.response?.data?.error) {
@@ -38,20 +38,14 @@ export const getSessionMessages = async (sessionId) => {
   }
 };
 
-// sendMessage function removed - using WebSocket only for real-time messaging
-
-export const saveMessage = async (sessionId, sender, content) => {
+export const deleteSession = async (sessionToken) => {
   try {
-    const response = await api.post('/chats/message/save/', {
-      session_id: sessionId,
-      sender,
-      content
-    });
+    const response = await api.delete(`/chats/${sessionToken}/delete/`);
     return response.data;
   } catch (error) {
     if (error.response?.data?.error) {
       throw new Error(error.response.data.error);
     }
-    throw new Error('Failed to save message.');
+    throw new Error('Failed to delete session.');
   }
 };
