@@ -9,7 +9,6 @@ from decouple import config
 import logging
 import asyncio
 import aiohttp
-import threading
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +82,7 @@ class MinIOService:
         except Exception as e:
             print(f"❌ Failed to notify Lambda: {str(e)}")
     
-    def upload_file(self, file_obj, object_name, content_type=None):
+    def upload_file(self, file_obj, object_name,content_type=None):
         """
         Upload file to MinIO
         
@@ -110,10 +109,7 @@ class MinIOService:
             )
             
             logger.info(f"✅ File uploaded to MinIO: {object_name}")
-            threading.Thread(
-                target=lambda: asyncio.run(self._trigger_lambda(self.bucket_name, object_name)),
-                daemon=True
-            ).start()
+            asyncio.run(self._trigger_lambda(self.bucket_name, object_name))
             return True
             
         except S3Error as e:

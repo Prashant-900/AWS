@@ -1,17 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Simple Python Lambda with API Gateway
+Description: Lambda to process MinIO uploads and embed into Pinecone
 
 Globals:
   Function:
-    Timeout: 60
-    MemorySize: 128
+    Timeout: 120
+    MemorySize: 512
 
 Resources:
   ApiGatewayFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: apigateway.fetch_data
+      Handler: fetch_data.fetch_data
       Runtime: python3.12
       CodeUri: ./apigateway
       Events:
@@ -20,8 +20,16 @@ Resources:
           Properties:
             Path: /hello
             Method: post
+      Environment:
+        Variables:
+          MINIO_ENDPOINT: "host.docker.internal:9000"
+          MINIO_ACCESS_KEY: "admin"
+          MINIO_SECRET_KEY: "password123"
+          PINECONE_API_KEY: "pcsk_2aGeqd_LFGg1pToTvFAYxJ5YMbHeySxZH7qQ7XhQKwptR7tu3AQpEc21umH8iVLH2jk2R1"
+          PINECONE_ENV: "us-east-1"
+          GOOGLE_API_KEY: "AIzaSyA_uONyo98FoQerYGAnJOoA9ncTHM7wFsI"
 
 Outputs:
   ApiUrl:
-    Description: "Invoke URL"
+    Description: "API Gateway invoke URL"
     Value: "http://127.0.0.1:3000/hello"

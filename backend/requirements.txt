@@ -15,3 +15,7 @@ channels-redis
 asyncio
 daphne
 minio
+pinecone
+pdfplumber
+docx2txt
+langchain_google_genai

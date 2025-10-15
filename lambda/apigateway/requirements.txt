@@ -1,0 +1,6 @@
+minio
+pinecone
+python-dotenv
+google-genai
+pdfplumber
+docx2txt
