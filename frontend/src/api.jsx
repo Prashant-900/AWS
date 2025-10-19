@@ -1,9 +1,24 @@
 import axios from "axios";
 import { ACCESS_TOKEN, REFRESH_TOKEN } from "./constants";
+import { getConfig } from "./config";
 
+// Create API instance with dynamic base URL
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: '', // fallback
 });
+
+// Function to update API base URL after config is loaded
+export const updateApiConfig = () => {
+  try {
+    const config = getConfig();
+    api.defaults.baseURL = config.API_URL;
+  } catch {
+    // Config not loaded yet, keep fallback
+  }
+};
+
+// Try to update config immediately (in case it's already loaded)
+updateApiConfig();
 
 api.interceptors.request.use(
   (config) => {
@@ -33,7 +48,6 @@ api.interceptors.response.use(
       const isTokenRefresh = error.config?.url?.includes('/token/refresh/');
       
       if (isTokenRefresh && (error.response.status === 401 || error.response.status === 500)) {
-        console.log('Token refresh failed, clearing tokens');
         localStorage.removeItem(ACCESS_TOKEN);
         localStorage.removeItem(REFRESH_TOKEN);
         

@@ -3,8 +3,6 @@ import Sidebar from './sidebar';
 import ChatArea from './ChatArea';
 import MessageInput from './textfield';
 import useSessionLogic from './useSessionLogic.jsx';
-import TokenDebugger from '../components/TokenDebugger';
-import { useWhyDidYouUpdate } from '../hooks/useWhyDidYouUpdate';
 
 export default function Session() {
   const sessionLogicData = useSessionLogic();
@@ -28,17 +26,7 @@ export default function Session() {
     addUploadedMessage
   } = sessionLogicData;
 
-  // Debug re-renders
-  useWhyDidYouUpdate('Session', sessionLogicData);
-  
-  console.log('🎬 Session component rendered with:', {
-    sessionToken,
-    wsConnectionStatus,
-    messagesCount: messages.length,
-    sessionsCount: sessions.length,
-    loading,
-    error
-  });
+
 
   // Show error message if there's a general error
   if (error && !sessionToken) {
@@ -99,11 +87,6 @@ export default function Session() {
       top: 0,
       left: 0
     }}>
-      <TokenDebugger 
-        connectionStatus={wsConnectionStatus} 
-        messagesCount={messages.length}
-      />
-      
       <div style={{ gridArea: 'sidebar' }}>
         <Sidebar
           user={user}

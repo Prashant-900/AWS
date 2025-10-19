@@ -1,0 +1,5 @@
+{
+  "API_URL": "http://aws-hackathom-lb-224814048.eu-north-1.elb.amazonaws.com",
+  "MODE": "development",
+  "WS_API_URL": "ws://aws-hackathom-lb-224814048.eu-north-1.elb.amazonaws.com"
+}

@@ -13,9 +13,7 @@ export const useUserProfile = () => {
       const userData = await getUserProfile();
       setUser(userData);
       setError(''); // Clear any previous errors
-      console.log('✅ User profile loaded:', userData.username);
-    } catch (err) {
-      console.error('❌ Failed to load user profile:', err);
+    } catch  {
       setError('Failed to load user profile');
     }
   }, []);

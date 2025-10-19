@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { formatParser } from './formatParser';
+import { getConfig } from '../../config';
 
 // Import all view components
 import TextView from './TextView';
@@ -11,6 +12,8 @@ import MermaidView from './MermaidView';
 import CsvView from './CsvView';
 import ImageView from './ImageView';
 import TableView from './TableView';
+import ToolUsageView from './ToolUsageView';
+import ToolSummaryView from './ToolSummaryView';
 
 /**
  * Main Response Renderer Component
@@ -89,6 +92,12 @@ const ResponseRenderer = ({
       
       case 'TABLE':
         return <TableView {...props} />;
+      
+      case 'TOOL_USAGE':
+        return <ToolUsageView {...props} />;
+      
+      case 'TOOL_SUMMARY':
+        return <ToolSummaryView {...props} />;
       
       default:
         // Unknown format, render as text with warning
@@ -178,7 +187,14 @@ const ResponseRenderer = ({
   return (
     <div className="response-renderer">
       {/* Debug info (only in development) */}
-      {import.meta.env.DEV && (
+      {(() => {
+        try {
+          const config = getConfig();
+          return config.MODE === 'development';
+        } catch {
+          return false;
+        }
+      })() && (
         <div className="debug-info">
           <details>
             <summary>Debug Info</summary>

@@ -50,7 +50,6 @@ const MermaidView = ({ content, isStreaming, onCopy }) => {
         }
       }
     } catch (error) {
-      console.error('Mermaid rendering error:', error);
       setRenderError(error.message || 'Failed to render diagram');
       if (mermaidRef.current) {
         mermaidRef.current.innerHTML = `

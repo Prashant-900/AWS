@@ -28,24 +28,17 @@ const MessageInput = ({
     const newWrappers = addFiles(files) || [];
 
     if (newWrappers.length === 0) {
-      console.warn('⚠️ No valid files to upload. Check validation errors:', uploadError);
       return;
     }
 
     if (!sessionToken) {
-      console.error('Session token is required for immediate upload');
       return;
     }
 
     try {
-      console.log('📤 Uploading files immediately after selection', { 
-        count: newWrappers.length,
-        files: newWrappers.map(f => ({ name: f.name, type: f.type, size: f.size }))
-      });
       const result = await uploadFilesToServer(sessionToken, '', newWrappers);
 
       if (result.success) {
-        console.log('✅ Immediate upload successful', result.data);
         
         // Clear uploaded files from preview
         clearAllFiles();
@@ -54,11 +47,9 @@ const MessageInput = ({
         if (onFileUploadSuccess && result.data?.user_message) {
           onFileUploadSuccess(result.data.user_message);
         }
-      } else {
-        console.error('❌ Immediate upload failed:', result.error);
       }
-    } catch (err) {
-      console.error('❌ Error during immediate upload:', err);
+    } catch {
+      //
     }
   };
 
@@ -75,7 +66,6 @@ const MessageInput = ({
     }
     
     // Send the text-only message via WebSocket
-    console.log('💬 Sending text-only message via WebSocket');
     onSubmit(e, {
       message: messageText,
       files: []

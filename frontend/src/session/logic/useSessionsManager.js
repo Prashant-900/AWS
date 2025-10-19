@@ -16,9 +16,7 @@ export const useSessionsManager = () => {
       const sessionsData = await getSessions();
       setSessions(sessionsData);
       setError(''); // Clear any previous errors
-      console.log('✅ Sessions loaded:', sessionsData.length);
-    } catch (err) {
-      console.error('❌ Failed to load sessions:', err);
+    } catch {
       setError('Failed to load sessions');
     } finally {
       setLoading(false);
@@ -31,7 +29,6 @@ export const useSessionsManager = () => {
       setError(''); // Clear any previous errors
       const newSessionData = await createSession();
       setSessions(prevSessions => [newSessionData, ...prevSessions]);
-      console.log('✅ New session created:', newSessionData.session_token);
       
       if (navigate) {
         navigate(`/session/${newSessionData.session_token}`);
@@ -39,7 +36,6 @@ export const useSessionsManager = () => {
       
       return newSessionData;
     } catch (err) {
-      console.error('❌ Failed to create session:', err);
       setError('Failed to create new session. Please try again.');
       throw err;
     } finally {
@@ -50,7 +46,6 @@ export const useSessionsManager = () => {
   const selectSession = useCallback((sessionToken, sessionsList) => {
     const session = (sessionsList || sessions).find(s => s.session_token === sessionToken);
     setCurrentSession(session);
-    console.log('📌 Session selected:', session?.session_token);
     return session;
   }, [sessions]);
 

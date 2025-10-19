@@ -1,6 +1,7 @@
-minio
+boto3
 pinecone
-python-dotenv
+google-generativeai
 google-genai
 pdfplumber
 docx2txt
+langchain-text-splitters

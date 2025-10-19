@@ -41,8 +41,7 @@ const ImageView = ({ content, isStreaming, onCopy }) => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Download failed:', error);
+    } catch  {
       // Fallback: open in new tab
       window.open(imageUrl, '_blank');
     }

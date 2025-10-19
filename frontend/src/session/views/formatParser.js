@@ -29,7 +29,7 @@ export class ResponseFormatParser {
     
     this.supportedFormats = [
       'TEXT', 'CODE', 'JSON', 'MARKDOWN', 'LATEX', 
-      'MERMAID', 'CSV', 'IMAGE', 'TABLE'
+      'MERMAID', 'CSV', 'IMAGE', 'TABLE', 'TOOL_USAGE', 'TOOL_SUMMARY'
     ];
   }
 
@@ -392,5 +392,7 @@ export const FORMAT_TYPES = {
   MERMAID: 'MERMAID',
   CSV: 'CSV',
   IMAGE: 'IMAGE',
-  TABLE: 'TABLE'
+  TABLE: 'TABLE',
+  TOOL_USAGE: 'TOOL_USAGE',
+  TOOL_SUMMARY: 'TOOL_SUMMARY'
 };

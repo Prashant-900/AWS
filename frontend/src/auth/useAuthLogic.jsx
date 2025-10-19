@@ -26,10 +26,10 @@ const useAuthLogic = () => {
       let data;
       if (isLogin) {
         data = await loginUser(formData.email, formData.password);
-        console.log('Login success:', data);
+        //
       } else {
         data = await registerUser(formData.username, formData.email, formData.password);
-        console.log('Register success:', data);
+        //
       }
       
       // Store tokens
@@ -40,7 +40,7 @@ const useAuthLogic = () => {
       window.location.href = '/';
       
     } catch (err) {
-      console.error('Auth error:', err);
+      //
       setError(err.message || 'Authentication failed');
     } finally {
       setLoading(false);

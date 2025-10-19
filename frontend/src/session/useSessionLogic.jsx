@@ -94,33 +94,25 @@ const useSessionLogic = () => {
 
   // Initialize user profile on mount
   useEffect(() => {
-    console.log('🎯 useSessionLogic: Loading user profile');
     loadUserProfile();
   }, [loadUserProfile]);
 
   // Initialize sessions after user is loaded
   useEffect(() => {
     if (user) {
-      console.log('🎯 useSessionLogic: User loaded, loading sessions');
       loadSessions();
     }
   }, [user, loadSessions]);
 
   // Handle session changes and message loading
   useEffect(() => {
-    console.log('🎯 useSessionLogic: Session/messages effect triggered', { 
-      sessionToken, 
-      sessionsLength: sessions.length 
-    });
     
     if (sessionToken && sessionToken !== 'new' && sessions.length > 0) {
       const session = selectSession(sessionToken, sessions);
       if (session) {
-        console.log('🎯 useSessionLogic: Loading messages for session', sessionToken);
         loadSessionMessages(sessionToken);
       }
     } else {
-      console.log('🎯 useSessionLogic: Clearing messages and session');
       clearMessages();
       clearCurrentSession();
     }
@@ -136,12 +128,7 @@ const useSessionLogic = () => {
     const messageContent = data?.message || getMessage();
     const attachedFiles = data?.files || [];
     
-    console.log('📎 Sending message with files:', {
-      messageContent,
-      filesCount: attachedFiles.length,
-      files: attachedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
-    });
-    
+
     await handleSendMessage(messageContent, connectionStatus, currentSession, {
       addUserMessage,
       removeMessage,
@@ -160,9 +147,8 @@ const useSessionLogic = () => {
   const enhancedCreateNewSession = async () => {
     try {
       await handleCreateNewSession(navigate);
-    } catch (error) {
+    } catch {
       // Error is already handled in the hook
-      console.error('Session creation failed:', error);
     }
   };
 

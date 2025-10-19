@@ -1,0 +1,14 @@
+strands-agents
+strands-agents-tools
+boto3
+pinecone
+langchain
+langchain_google_genai
+pdfplumber
+docx2txt
+fastapi
+uvicorn[standard]
+python-dotenv
+opensearch-py
+mem0ai
+google-genai

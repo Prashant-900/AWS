@@ -21,8 +21,8 @@ const ProtectedRoute = ({ children }) => {
         localStorage.removeItem(REFRESH_TOKEN);
         setisAuthorized(false);
       }
-    } catch (error) {
-      console.log('Token refresh failed:', error);
+    } catch {
+      //
       // Clear invalid tokens when refresh fails (e.g., user doesn't exist)
       localStorage.removeItem(ACCESS_TOKEN);
       localStorage.removeItem(REFRESH_TOKEN);

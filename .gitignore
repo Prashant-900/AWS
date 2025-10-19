@@ -1,6 +1,9 @@
 # Virtual Environment
 AWS/
 
+# Lambda layers
+lambda/lambda_layer/
+
 # Python
 __pycache__/
 *.py[cod]

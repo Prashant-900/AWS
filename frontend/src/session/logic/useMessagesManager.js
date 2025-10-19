@@ -20,15 +20,12 @@ export const useMessagesManager = () => {
     try {
       setLoading(true);
       setError(''); // Clear any previous errors
-      console.log(`📥 Loading messages for session ${sessionToken}`);
       
       const messagesData = await getSessionMessages(sessionToken);
       setMessages(messagesData);
-      console.log(`✅ Loaded ${messagesData.length} messages for session ${sessionToken}`);
       
       return messagesData;
     } catch (err) {
-      console.error('❌ Failed to load messages:', err);
       setError('Failed to load messages');
       throw err;
     } finally {
@@ -45,13 +42,11 @@ export const useMessagesManager = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
-    console.log('📤 User message added:', userMessage.id);
     return userMessage;
   }, []);
 
   const removeMessage = useCallback((messageId) => {
     setMessages(prev => prev.filter(msg => msg.id !== messageId));
-    console.log('🗑️ Message removed:', messageId);
   }, []);
 
   const addFinalMessage = useCallback((finalMessage) => {
@@ -67,7 +62,6 @@ export const useMessagesManager = () => {
       });
       
       if (!exists) {
-        console.log('💾 Adding final AI message to messages:', finalMessage.id);
         return [...prevMessages, finalMessage];
       }
       return prevMessages;
@@ -77,7 +71,6 @@ export const useMessagesManager = () => {
   const clearMessages = useCallback(() => {
     setMessages([]);
     setStreamingMessage(null);
-    console.log('🧹 Messages cleared');
   }, []);
 
   const clearStreamingMessage = useCallback(() => {
@@ -95,7 +88,6 @@ export const useMessagesManager = () => {
     };
 
     setMessages(prev => [...prev, message]);
-    console.log('📤 Uploaded message added to messages:', message.id);
   }, []);
 
   return {

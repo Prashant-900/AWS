@@ -14,6 +14,8 @@ Resources:
       Handler: fetch_data.fetch_data
       Runtime: python3.12
       CodeUri: ./apigateway
+      Layers:
+        - Ref: LambdaDependenciesLayer
       Events:
         HelloWorld:
           Type: Api
@@ -27,7 +29,17 @@ Resources:
           MINIO_SECRET_KEY: "password123"
           PINECONE_API_KEY: "pcsk_2aGeqd_LFGg1pToTvFAYxJ5YMbHeySxZH7qQ7XhQKwptR7tu3AQpEc21umH8iVLH2jk2R1"
           PINECONE_ENV: "us-east-1"
+          PINECONE_INDEX: "vector-db"
           GOOGLE_API_KEY: "AIzaSyA_uONyo98FoQerYGAnJOoA9ncTHM7wFsI"
+
+  LambdaDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: lambda-dependencies
+      Description: Python dependencies for Lambda
+      ContentUri: ./lambda_layer
+      CompatibleRuntimes:
+        - python3.12
 
 Outputs:
   ApiUrl:

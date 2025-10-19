@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ACCESS_TOKEN } from '../constants';
-
+import { getConfig } from '../config';
 const useWebSocket = (sessionToken, onMessage, onError) => {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -22,9 +22,22 @@ const useWebSocket = (sessionToken, onMessage, onError) => {
 
   // Get WebSocket URL
   const getWebSocketUrl = useCallback(() => {
+    try {
+      const config = getConfig();
+      const wsBaseUrl = config.WS_API_URL;
+      
+      if (wsBaseUrl) {
+        // Use configured WebSocket base URL
+        return `${wsBaseUrl}/ws/chat/${sessionToken}/`;
+      }
+    } catch {
+      //
+    }
+    
+    // Fallback to auto-detection for development
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname;
-    const port = '8000'; // Django default port
+    const host = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
+    const port = '8001'; // Default port
     return `${protocol}//${host}:${port}/ws/chat/${sessionToken}/`;
   }, [sessionToken]);
 
@@ -41,7 +54,6 @@ const useWebSocket = (sessionToken, onMessage, onError) => {
 
     try {
       const token = localStorage.getItem(ACCESS_TOKEN);
-      console.log('WebSocket connecting with token:', token ? 'Token found' : 'No token');
       
       if (!token) {
           onErrorRef.current?.('No authentication token found');
@@ -53,7 +65,6 @@ const useWebSocket = (sessionToken, onMessage, onError) => {
       ws.current = new WebSocket(wsUrl);
 
       ws.current.onopen = () => {
-        console.log(`WebSocket connected for session: ${sessionToken}`);
         setConnectionStatus('connected');
         reconnectAttempts.current = 0;
 
@@ -72,23 +83,18 @@ const useWebSocket = (sessionToken, onMessage, onError) => {
           const data = JSON.parse(event.data);
           
           // DEBUG: Log all messages from backend
-          console.log('🔽 WebSocket message received:', data);
           
           switch (data.type) {
             case 'connection':
-              console.log('✅ WebSocket connection confirmed:', data);
               break;
               
             case 'authenticated':
-              console.log('✅ WebSocket authentication confirmed:', data);
               break;
               
             case 'message_received':
-              console.log('📩 User message confirmed saved:', data);
               break;
               
             case 'stream_start':
-              console.log('🚀 AI streaming started:', data);
               setIsStreaming(true);
               onMessageRef.current?.({
                 type: 'stream_start',
@@ -97,7 +103,6 @@ const useWebSocket = (sessionToken, onMessage, onError) => {
               break;
               
             case 'stream_chunk':
-              console.log('📝 AI chunk received:', data.content);
               onMessageRef.current?.({
                 type: 'stream_chunk',
                 content: data.content,
@@ -106,7 +111,6 @@ const useWebSocket = (sessionToken, onMessage, onError) => {
               break;
               
             case 'stream_end':
-              console.log('✅ AI streaming completed:', data);
               setIsStreaming(false);
               onMessageRef.current?.({
                 type: 'stream_end',
@@ -116,31 +120,25 @@ const useWebSocket = (sessionToken, onMessage, onError) => {
               break;
               
             case 'error':
-              console.error('❌ WebSocket error:', data);
               onErrorRef.current?.(data.message || 'WebSocket error occurred');
               setIsStreaming(false);
               break;
               
             case 'heartbeat_ack':
-              console.log('💓 Heartbeat acknowledged');
               break;
               
             case 'heartbeat':
-              console.log('💓 Heartbeat from server');
               break;
               
             default:
-              console.log('❓ Unknown message type:', data);
               onMessageRef.current?.(data);
           }
-        } catch (error) {
-          console.error('Failed to parse WebSocket message:', error, 'Raw data:', event.data);
+        } catch {
           onErrorRef.current?.('Failed to parse server message');
         }
       };
 
       ws.current.onclose = (event) => {
-        console.log(`WebSocket disconnected for session ${sessionToken}:`, event.code, event.reason);
         setConnectionStatus('disconnected');
         setIsStreaming(false);
         
@@ -154,7 +152,6 @@ const useWebSocket = (sessionToken, onMessage, onError) => {
             reconnectAttempts.current < maxReconnectAttempts && 
             currentSessionToken.current === sessionToken) {
           const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-          console.log(`Attempting to reconnect to session ${sessionToken} in ${timeout}ms...`);
           
           reconnectTimeout.current = setTimeout(() => {
             if (currentSessionToken.current === sessionToken) { // Double-check session hasn't changed
@@ -167,13 +164,11 @@ const useWebSocket = (sessionToken, onMessage, onError) => {
         }
       };
 
-      ws.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
+      ws.current.onerror = () => {
         onErrorRef.current?.('WebSocket connection error');
       };
 
-    } catch (error) {
-      console.error('Failed to create WebSocket:', error);
+    } catch {
       setConnectionStatus('error');
       onErrorRef.current?.('Failed to create WebSocket connection');
     }
@@ -208,11 +203,9 @@ const useWebSocket = (sessionToken, onMessage, onError) => {
         type: 'send_message',
         content: message
       };
-      console.log('🔼 Sending message to WebSocket:', messageData);
       ws.current.send(JSON.stringify(messageData));
       return true;
     } else {
-      console.error('❌ Cannot send message - WebSocket not connected. ReadyState:', ws.current?.readyState);
       onErrorRef.current?.('WebSocket is not connected');
       return false;
     }

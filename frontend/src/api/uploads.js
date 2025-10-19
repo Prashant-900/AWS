@@ -32,7 +32,7 @@ export const uploadFiles = async (files, sessionToken, messageText = '') => {
       data: response.data
     };
   } catch (error) {
-    console.error('File upload error:', error);
+    //
     return {
       success: false,
       error: error.response?.data?.error || 'Failed to upload files'
@@ -48,7 +48,7 @@ export const getFileDownloadUrl = async (fileId) => {
       data: response.data
     };
   } catch (error) {
-    console.error('Get download URL error:', error);
+    //
     return {
       success: false,
       error: error.response?.data?.error || 'Failed to get download URL'
@@ -64,7 +64,7 @@ export const deleteFile = async (fileId) => {
       data: response.data
     };
   } catch (error) {
-    console.error('Delete file error:', error);
+    //
     return {
       success: false,
       error: error.response?.data?.error || 'Failed to delete file'
@@ -91,7 +91,7 @@ export const getSessionFiles = async (sessionToken, options = {}) => {
       data: response.data
     };
   } catch (error) {
-    console.error('Get session files error:', error);
+    //
     return {
       success: false,
       error: error.response?.data?.error || 'Failed to get files'

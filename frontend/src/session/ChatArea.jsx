@@ -99,16 +99,6 @@ const ChatArea = ({
   const allMessages = (hasStreamingContent && streamingMessage) 
     ? [...messages, streamingMessage]
     : messages;
-    
-  console.log('📊 ChatArea render:', {
-    sessionToken,
-    messagesCount: messages.length,
-    streamingMessage: streamingMessage?.content?.substring(0, 50),
-    hasStreamingContent,
-    allMessagesCount: allMessages.length,
-    loading: loading,
-    connectionStatus: connectionStatus
-  });
 
     return (
       <div style={{ 

@@ -20,14 +20,7 @@ const UploadDemo = () => {
   } = useFileUpload();
 
   const handleSend = () => {
-    console.log('Sending message:', {
-      message,
-      files: uploadedFiles.map(f => ({ 
-        name: f.name, 
-        size: f.size, 
-        type: f.type 
-      }))
-    });
+
     
     // Clear everything after sending
     setMessage('');

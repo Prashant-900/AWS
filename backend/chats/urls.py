@@ -11,6 +11,9 @@ urlpatterns = [
     # Get messages for a specific session
     path('<uuid:session_token>/messages/', views.get_session_messages, name='get_session_messages'),
     
+    # Stream chat with agent
+    path('<uuid:session_token>/stream/', views.stream_chat, name='stream_chat'),
+    
     # Delete a session
     path('<uuid:session_token>/delete/', views.delete_session, name='delete_session'),
 ]

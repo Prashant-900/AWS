@@ -1,7 +1,14 @@
 import React from 'react';
+import { getConfig } from '../config';
 
 const FileAttachment = ({ file }) => {
-  const API_BASE_URL = import.meta.env.VITE_API_URL;
+  let API_BASE_URL = 'http://localhost:8001'; // fallback
+  try {
+    const config = getConfig();
+    API_BASE_URL = config.API_URL;
+  } catch {
+    // Config not loaded yet, use fallback
+  }
   const getFileIcon = (fileType) => {
     switch (fileType) {
       case 'image':
@@ -56,8 +63,7 @@ const FileAttachment = ({ file }) => {
       } else {
         throw new Error('No download URL received');
       }
-    } catch (error) {
-      console.error('Error opening file:', error);
+    } catch {
       alert('Failed to open file');
     }
   };

@@ -16,14 +16,6 @@ export const useSessionActions = () => {
       return; // Nothing to send
     }
 
-    console.log('🚀 handleSendMessage called with:', {
-      messageContent,
-      filesCount: attachedFiles.length,
-      files: attachedFiles.map(f => ({ name: f.name, size: f.size, type: f.type }))
-    });
-    console.log('📡 Connection status:', connectionStatus);
-    console.log('📝 Current session:', currentSession);
-
     // Check if WebSocket is connected
     if (connectionStatus !== 'connected') {
       setError('Cannot send message - WebSocket not connected. Please wait for connection or refresh the page.');
@@ -49,8 +41,6 @@ export const useSessionActions = () => {
     clearMessage();
     setError(''); // Clear any previous errors
 
-    console.log('📤 Sending message via WebSocket:', { messageContent, filesCount: attachedFiles.length });
-    
     // Prepare message data for WebSocket
     const messageData = {
       content: messageContent || '',

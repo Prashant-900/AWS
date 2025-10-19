@@ -1,48 +1,52 @@
-import os
-import hashlib
-import uuid
-from datetime import datetime, timedelta
-from minio import Minio
-from minio.error import S3Error
+from datetime import timedelta
+import boto3
+from botocore.exceptions import ClientError, NoCredentialsError
 from django.conf import settings
 from decouple import config
 import logging
-import asyncio
-import aiohttp
 
 logger = logging.getLogger(__name__)
 
 class MinIOService:
-    """Service class for MinIO operations"""
+    """Service class for S3 operations using boto3"""
     
     def __init__(self):
-        # Get MinIO configuration from environment
-        self.endpoint = config('MINIO_ENDPOINT')
-        self.access_key = config('MINIO_ACCESS_KEY')
-        self.secret_key = config('MINIO_SECRET_KEY')
-        self.secure = config('MINIO_SECURE', cast=bool)
-        self.bucket_name = config('MINIO_BUCKET_NAME')
+        # Get AWS S3 configuration from environment
+        self.access_key = config('AWS_ACCESS_KEY_ID')
+        self.secret_key = config('AWS_SECRET_ACCESS_KEY')
+        self.region = config('AWS_REGION', default='eu-north-1')
+        self.bucket_name = config('AWS_BUCKET_NAME')
+        
+        # Optional: For S3-compatible services (like MinIO) with custom endpoint
+        self.endpoint_url = config('AWS_ENDPOINT_URL', default=None)
         
         # Initialize client as None - will be created when needed
         self.client = None
+        self.s3_resource = None
     
     def _get_client(self):
-        """Lazy initialization of MinIO client"""
+        """Lazy initialization of boto3 S3 client"""
         if self.client is None:
             try:
-                self.client = Minio(
-                    self.endpoint,
-                    access_key=self.access_key,
-                    secret_key=self.secret_key,
-                    secure=self.secure
-                )
-                logger.info(f"✅ MinIO client initialized: {self.endpoint}")
+                client_config = {
+                    'aws_access_key_id': self.access_key,
+                    'aws_secret_access_key': self.secret_key,
+                    'region_name': self.region
+                }
+                
+                self.client = boto3.client('s3', **client_config)
+                self.s3_resource = boto3.resource('s3', **client_config)
+                
+                logger.info(f"✅ S3 client initialized for region: {self.region}")
                 
                 # Ensure bucket exists
                 self._ensure_bucket_exists()
                 
+            except NoCredentialsError as e:
+                logger.error(f"❌ AWS credentials not found: {str(e)}")
+                raise e
             except Exception as e:
-                logger.error(f"❌ Failed to initialize MinIO client: {str(e)}")
+                logger.error(f"❌ Failed to initialize S3 client: {str(e)}")
                 raise e
         
         return self.client
@@ -50,45 +54,36 @@ class MinIOService:
     def _ensure_bucket_exists(self):
         """Create bucket if it doesn't exist"""
         try:
-            if not self.client.bucket_exists(self.bucket_name):
-                self.client.make_bucket(self.bucket_name)
-                logger.info(f"✅ Created MinIO bucket: {self.bucket_name}")
+            # Check if bucket exists
+            self.client.head_bucket(Bucket=self.bucket_name)
+            logger.info(f"✅ S3 bucket exists: {self.bucket_name}")
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == '404':
+                # Bucket doesn't exist, create it
+                try:
+                    if self.region == 'us-east-1':
+                        self.client.create_bucket(Bucket=self.bucket_name)
+                    else:
+                        self.client.create_bucket(
+                            Bucket=self.bucket_name,
+                            CreateBucketConfiguration={'LocationConstraint': self.region}
+                        )
+                    logger.info(f"✅ Created S3 bucket: {self.bucket_name}")
+                except ClientError as create_error:
+                    logger.error(f"❌ Error creating bucket: {str(create_error)}")
+                    raise
             else:
-                logger.info(f"✅ MinIO bucket exists: {self.bucket_name}")
-        except S3Error as e:
-            logger.error(f"❌ Error ensuring bucket exists: {str(e)}")
-            raise
-
-    async def _trigger_lambda(self, bucket_name, object_name):
-        """Asynchronously notify Lambda about uploaded file"""
-        lambda_url = "http://127.0.0.1:3000/hello"  # change to your Lambda URL if needed
-
-        payload = {
-            "Records": [
-                {
-                    "s3": {
-                        "bucket": {"name": bucket_name},
-                        "object": {"key": object_name}
-                    }
-                }
-            ]
-        }
-
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(lambda_url, json=payload) as response:
-                    result = await response.text()
-                    print(f"📡 Lambda notified for {object_name} → {response.status}: {result}")
-        except Exception as e:
-            print(f"❌ Failed to notify Lambda: {str(e)}")
+                logger.error(f"❌ Error checking bucket: {str(e)}")
+                raise
     
-    def upload_file(self, file_obj, object_name,content_type=None):
+    def upload_file(self, file_obj, object_name, content_type=None):
         """
-        Upload file to MinIO
+        Upload file to S3
         
         Args:
             file_obj: Django UploadedFile object or file-like object
-            object_name: Object name/path in MinIO
+            object_name: Object name/path in S3
             content_type: MIME type
             
         Returns:
@@ -100,20 +95,26 @@ class MinIOService:
             # Reset file pointer to beginning
             file_obj.seek(0)
             
-            client.put_object(
-                bucket_name=self.bucket_name,
-                object_name=object_name,
-                data=file_obj,
-                length=file_obj.size,
-                content_type=content_type or 'application/octet-stream'
+            # Prepare extra args
+            extra_args = {}
+            if content_type:
+                extra_args['ContentType'] = content_type
+            else:
+                extra_args['ContentType'] = 'application/octet-stream'
+            
+            # Upload file to S3
+            client.upload_fileobj(
+                file_obj,
+                self.bucket_name,
+                object_name,
+                ExtraArgs=extra_args
             )
             
-            logger.info(f"✅ File uploaded to MinIO: {object_name}")
-            asyncio.run(self._trigger_lambda(self.bucket_name, object_name))
+            logger.info(f"✅ File uploaded to S3: {object_name}")
             return True
             
-        except S3Error as e:
-            logger.error(f"❌ MinIO upload error: {str(e)}")
+        except ClientError as e:
+            logger.error(f"❌ S3 upload error: {str(e)}")
             return False
         except Exception as e:
             logger.error(f"❌ Upload error: {str(e)}")
@@ -124,13 +125,17 @@ class MinIOService:
         try:
             client = self._get_client()
             
-            url = client.presigned_get_object(
-                bucket_name=self.bucket_name,
-                object_name=object_name,
-                expires=timedelta(hours=expiry_hours)
+            # Generate presigned URL (expires in seconds)
+            url = client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': self.bucket_name,
+                    'Key': object_name
+                },
+                ExpiresIn=int(timedelta(hours=expiry_hours).total_seconds())
             )
             return url
-        except S3Error as e:
+        except ClientError as e:
             logger.error(f"❌ Error generating download URL: {str(e)}")
             return None
         except Exception as e:
@@ -138,13 +143,13 @@ class MinIOService:
             return None
     
     def delete_file(self, object_name):
-        """Delete file from MinIO"""
+        """Delete file from S3"""
         try:
             client = self._get_client()
-            client.remove_object(self.bucket_name, object_name)
-            logger.info(f"✅ File deleted from MinIO: {object_name}")
+            client.delete_object(Bucket=self.bucket_name, Key=object_name)
+            logger.info(f"✅ File deleted from S3: {object_name}")
             return True
-        except S3Error as e:
+        except ClientError as e:
             logger.error(f"❌ Error deleting file: {str(e)}")
             return False
         except Exception as e:
@@ -152,17 +157,17 @@ class MinIOService:
             return False
     
     def get_file_info(self, object_name):
-        """Get file information from MinIO"""
+        """Get file information from S3"""
         try:
             client = self._get_client()
-            stat = client.stat_object(self.bucket_name, object_name)
+            response = client.head_object(Bucket=self.bucket_name, Key=object_name)
             return {
-                'size': stat.size,
-                'content_type': stat.content_type,
-                'last_modified': stat.last_modified,
-                'metadata': stat.metadata
+                'size': response.get('ContentLength'),
+                'content_type': response.get('ContentType'),
+                'last_modified': response.get('LastModified'),
+                'metadata': response.get('Metadata', {})
             }
-        except S3Error as e:
+        except ClientError as e:
             logger.error(f"❌ Error getting file info: {str(e)}")
             return None
         except Exception as e:

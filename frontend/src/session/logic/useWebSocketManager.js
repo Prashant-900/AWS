@@ -10,11 +10,8 @@ export const useWebSocketManager = (sessionToken, currentSession) => {
 
   // WebSocket message handler
   const handleWebSocketMessage = useCallback((data, messageHandlers) => {
-    console.log('🎯 handleWebSocketMessage called with:', data);
-    
     // Only handle messages for current session
     if (!sessionToken || sessionToken === 'new') {
-      console.log('❌ Ignoring message - no active session');
       return;
     }
     
@@ -22,7 +19,6 @@ export const useWebSocketManager = (sessionToken, currentSession) => {
     
     switch (data.type) {
       case 'stream_start':
-        console.log('🚀 Starting new streaming message for session:', sessionToken);
         setError(''); // Clear any timeout errors
         
         // Clear timeout if it exists
@@ -42,7 +38,6 @@ export const useWebSocketManager = (sessionToken, currentSession) => {
         break;
         
       case 'stream_chunk':
-        console.log('📝 Adding chunk to streaming message:', data.content);
         setStreamingMessage(prev => {
           // Only update if message belongs to current session
           if (prev && (prev.id === data.message_id || prev.id === data.messageId) && prev.sessionToken === sessionToken) {
@@ -64,7 +59,6 @@ export const useWebSocketManager = (sessionToken, currentSession) => {
         break;
         
       case 'stream_end':
-        console.log('✅ Ending streaming message for session:', sessionToken, data);
         setStreamingMessage(prev => {
           // Only process if message belongs to current session
           if (prev && prev.sessionToken === sessionToken) {
@@ -75,7 +69,6 @@ export const useWebSocketManager = (sessionToken, currentSession) => {
               timestamp: data.message?.timestamp || new Date().toISOString(),
               isStreaming: false
             };
-            console.log('💾 Adding final message to messages:', finalMessage);
             
             // Add final message using handler
             addFinalMessage(finalMessage);
@@ -88,13 +81,11 @@ export const useWebSocketManager = (sessionToken, currentSession) => {
         break;
         
       default:
-        console.log('❓ Unknown WebSocket message type:', data);
     }
   }, [sessionToken]);
 
   // WebSocket error handler
   const handleWebSocketError = useCallback((errorMessage, messageHandlers) => {
-    console.error('WebSocket error:', errorMessage);
     setError(`Connection error: ${errorMessage}`);
     
     const { setMessagesLoading, clearStreamingMessage } = messageHandlers;
